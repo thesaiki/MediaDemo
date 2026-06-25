@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#0A4D8C"/>
+    </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#F39200"/>
+    </marker>
+    <marker id="arrow-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6B7280"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2B7A3E"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="640" y="30" text-anchor="middle" font-size="22" font-weight="700" fill="#0A4D8C">Multi-CDN AntiPiracy — Request Flow</text>
+  <text x="640" y="52" text-anchor="middle" font-size="13" fill="#6B7280">Every content request is validated against a globally synced token-state service before delivery</text>
+
+  <!-- ============ Media Content Origin (above CDN) ============ -->
+  <g>
+    <rect x="322" y="75" width="240" height="72" rx="10" fill="#EAF3EA" stroke="#2B7A3E" stroke-width="2"/>
+    <text x="442" y="101" text-anchor="middle" font-size="15" font-weight="700" fill="#2B5A2E">Media Content Origin</text>
+    <text x="442" y="121" text-anchor="middle" font-size="11" fill="#1A1A1A">Serves media objects to the CDN</text>
+    <text x="442" y="137" text-anchor="middle" font-size="10.5" fill="#6B7280" font-style="italic">Only fetched after CDN receives 200 OK</text>
+  </g>
+
+  <!-- 4a: CDN -> Origin (fetch request) -->
+  <line x1="395" y1="175" x2="395" y2="149" stroke="#0A4D8C" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <circle cx="375" cy="160" r="11" fill="#0A4D8C"/>
+  <text x="375" y="164" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">4a</text>
+  <text x="352" y="183" text-anchor="end" font-size="10" fill="#0A4D8C" font-weight="600">fetch</text>
+
+  <!-- 4b: Origin -> CDN (content response) -->
+  <line x1="490" y1="149" x2="490" y2="175" stroke="#2B7A3E" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+  <circle cx="510" cy="160" r="11" fill="#2B7A3E"/>
+  <text x="510" y="164" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">4b</text>
+  <text x="533" y="183" text-anchor="start" font-size="10" fill="#2B7A3E" font-weight="600">content</text>
+
+  <!-- ============ Client Devices ============ -->
+  <g>
+    <rect x="40" y="200" width="190" height="110" rx="10" fill="#F4F7FA" stroke="#0A4D8C" stroke-width="2"/>
+    <text x="135" y="230" text-anchor="middle" font-size="15" font-weight="700" fill="#0A4D8C">Client Devices</text>
+    <text x="135" y="255" text-anchor="middle" font-size="12" fill="#1A1A1A">Phones · TVs · Browsers</text>
+    <text x="135" y="285" text-anchor="middle" font-size="11" fill="#6B7280" font-style="italic">Request media with token</text>
+  </g>
+
+  <!-- Arrow 1: Client -> CDN -->
+  <line x1="232" y1="255" x2="320" y2="255" stroke="#0A4D8C" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <circle cx="276" cy="238" r="11" fill="#0A4D8C"/>
+  <text x="276" y="242" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFFFF">1</text>
+
+  <!-- ============ CDN Layer (multi-CDN) ============ -->
+  <g>
+    <rect x="322" y="200" width="240" height="110" rx="10" fill="#D5E8F0" stroke="#0A4D8C" stroke-width="2"/>
+    <text x="442" y="220" text-anchor="middle" font-size="14" font-weight="700" fill="#0A4D8C">CDN Layer</text>
+
+    <rect x="332" y="232" width="66" height="28" rx="4" fill="#FFFFFF" stroke="#0A4D8C" stroke-width="1.2"/>
+    <text x="365" y="251" text-anchor="middle" font-size="11" font-weight="700" fill="#0A4D8C">Akamai</text>
+
+    <rect x="409" y="232" width="66" height="28" rx="4" fill="#FFFFFF" stroke="#0A4D8C" stroke-width="1.2"/>
+    <text x="442" y="251" text-anchor="middle" font-size="11" font-weight="700" fill="#0A4D8C">CDN #2</text>
+
+    <rect x="486" y="232" width="66" height="28" rx="4" fill="#FFFFFF" stroke="#0A4D8C" stroke-width="1.2"/>
+    <text x="519" y="251" text-anchor="middle" font-size="11" font-weight="700" fill="#0A4D8C">CDN #3</text>
+
+    <text x="442" y="281" text-anchor="middle" font-size="10.5" fill="#6B7280" font-style="italic">Calls Token Verification API</text>
+    <text x="442" y="296" text-anchor="middle" font-size="10.5" fill="#6B7280" font-style="italic">and applies mitigation on 403</text>
+  </g>
+
+  <!-- Arrow 2: CDN -> Token Verification API -->
+  <line x1="564" y1="255" x2="655" y2="255" stroke="#0A4D8C" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <circle cx="609" cy="238" r="11" fill="#0A4D8C"/>
+  <text x="609" y="242" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFFFF">2</text>
+
+  <!-- ============ Token Verification API outer box ============ -->
+  <g>
+    <rect x="655" y="155" width="585" height="410" rx="12" fill="#FFFFFF" stroke="#0A4D8C" stroke-width="2.5" stroke-dasharray="6,4"/>
+    <rect x="655" y="155" width="585" height="38" rx="12" fill="#0A4D8C"/>
+    <rect x="655" y="181" width="585" height="12" fill="#0A4D8C"/>
+    <text x="947" y="180" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">Akamai Token Verification API (Fully Managed)</text>
+
+    <!-- GTM -->
+    <rect x="760" y="213" width="375" height="86" rx="8" fill="#F39200" stroke="#B76D00" stroke-width="1.5"/>
+    <text x="947" y="240" text-anchor="middle" font-size="14" font-weight="700" fill="#FFFFFF">Global Traffic Manager</text>
+    <text x="947" y="262" text-anchor="middle" font-size="11" fill="#FFFFFF">Routes to geo and latency optimized</text>
+    <text x="947" y="280" text-anchor="middle" font-size="11" fill="#FFFFFF">Akamai Connected Cloud Region</text>
+
+    <!-- Fanout lines from GTM to regions -->
+    <line x1="947" y1="299" x2="947" y2="315" stroke="#6B7280" stroke-width="1.5"/>
+    <line x1="760" y1="315" x2="1135" y2="315" stroke="#6B7280" stroke-width="1.5"/>
+    <line x1="760" y1="315" x2="760" y2="343" stroke="#6B7280" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
+    <line x1="853" y1="315" x2="853" y2="343" stroke="#6B7280" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
+    <line x1="947" y1="315" x2="947" y2="343" stroke="#6B7280" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
+    <line x1="1041" y1="315" x2="1041" y2="343" stroke="#6B7280" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
+    <line x1="1135" y1="315" x2="1135" y2="343" stroke="#6B7280" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
+
+    <!-- Region tiles -->
+    <g>
+      <rect x="710" y="350" width="100" height="52" rx="6" fill="#F4F7FA" stroke="#0A4D8C" stroke-width="1.5"/>
+      <text x="760" y="381" text-anchor="middle" font-size="13" font-weight="700" fill="#0A4D8C">Frankfurt</text>
+    </g>
+    <g>
+      <rect x="803" y="350" width="100" height="52" rx="6" fill="#F4F7FA" stroke="#0A4D8C" stroke-width="1.5"/>
+      <text x="853" y="381" text-anchor="middle" font-size="11" font-weight="700" fill="#0A4D8C">Washington D.C.</text>
+    </g>
+    <g>
+      <rect x="897" y="350" width="100" height="52" rx="6" fill="#F4F7FA" stroke="#0A4D8C" stroke-width="1.5"/>
+      <text x="947" y="381" text-anchor="middle" font-size="13" font-weight="700" fill="#0A4D8C">São Paulo</text>
+    </g>
+    <g>
+      <rect x="991" y="350" width="100" height="52" rx="6" fill="#F4F7FA" stroke="#0A4D8C" stroke-width="1.5"/>
+      <text x="1041" y="381" text-anchor="middle" font-size="13" font-weight="700" fill="#0A4D8C">Mumbai</text>
+    </g>
+    <g>
+      <rect x="1085" y="350" width="100" height="52" rx="6" fill="#F4F7FA" stroke="#0A4D8C" stroke-width="1.5"/>
+      <text x="1135" y="381" text-anchor="middle" font-size="13" font-weight="700" fill="#0A4D8C">Sydney</text>
+    </g>
+
+    <!-- Globally synced state bus -->
+    <rect x="695" y="438" width="505" height="68" rx="8" fill="#E8F0E6" stroke="#3E7C43" stroke-width="1.5"/>
+    <text x="947" y="462" text-anchor="middle" font-size="13" font-weight="700" fill="#2B5A2E">Globally Synchronized Token State</text>
+    <text x="947" y="482" text-anchor="middle" font-size="11" fill="#1A1A1A">Rate · concurrent-user-ID detection · ban list · policies · audit trail</text>
+    <text x="947" y="498" text-anchor="middle" font-size="10" fill="#6B7280" font-style="italic">One source of truth across every region and every CDN</text>
+
+    <!-- Connectors from each region down to state bus -->
+    <line x1="760" y1="402" x2="760" y2="438" stroke="#6B7280" stroke-width="1" stroke-dasharray="3,2"/>
+    <line x1="853" y1="402" x2="853" y2="438" stroke="#6B7280" stroke-width="1" stroke-dasharray="3,2"/>
+    <line x1="947" y1="402" x2="947" y2="438" stroke="#6B7280" stroke-width="1" stroke-dasharray="3,2"/>
+    <line x1="1041" y1="402" x2="1041" y2="438" stroke="#6B7280" stroke-width="1" stroke-dasharray="3,2"/>
+    <line x1="1135" y1="402" x2="1135" y2="438" stroke="#6B7280" stroke-width="1" stroke-dasharray="3,2"/>
+
+    <!-- Configurable latency budget callout -->
+    <rect x="695" y="518" width="505" height="38" rx="6" fill="#FFF4E6" stroke="#F39200" stroke-width="1"/>
+    <text x="947" y="537" text-anchor="middle" font-size="12" font-weight="700" fill="#B76D00">Configurable latency budget · fail-open design</text>
+    <text x="947" y="551" text-anchor="middle" font-size="10.5" fill="#6B7280">Customer-tunable deadline (default 150 ms) — platform issues never block legitimate viewers</text>
+  </g>
+
+  <!-- Return arrow 3: Token Verification API back to CDN (Accept/Deny) -->
+  <path d="M 655 420 L 400 420 L 400 312" fill="none" stroke="#F39200" stroke-width="2.5" marker-end="url(#arrow-orange)"/>
+  <rect x="485" y="400" width="170" height="40" rx="5" fill="#FFFFFF" stroke="#F39200" stroke-width="1.5"/>
+  <text x="570" y="417" text-anchor="middle" font-size="11" font-weight="700" fill="#B76D00">3   Response</text>
+  <text x="570" y="432" text-anchor="middle" font-size="10" fill="#1A1A1A">Accept (200)  /  Deny (403)</text>
+
+  <!-- Return arrow 5: CDN to client (deliver content or CDN mitigation) -->
+  <path d="M 322 340 Q 265 340 265 305" fill="none" stroke="#F39200" stroke-width="2.5" marker-end="url(#arrow-orange)"/>
+  <rect x="230" y="335" width="92" height="40" rx="5" fill="#FFFFFF" stroke="#F39200" stroke-width="1.5"/>
+  <text x="276" y="352" text-anchor="middle" font-size="11" font-weight="700" fill="#B76D00">5   Deliver</text>
+  <text x="276" y="367" text-anchor="middle" font-size="10" fill="#1A1A1A">content or mitigation</text>
+
+  <!-- ============ Bottom panels ============ -->
+  <!-- CDN-side mitigation panel -->
+  <g>
+    <rect x="40" y="590" width="555" height="120" rx="8" fill="#F4F7FA" stroke="#CBD5E0" stroke-width="1"/>
+    <text x="55" y="613" font-size="13" font-weight="700" fill="#0A4D8C">CDN-side mitigation on 403</text>
+    <text x="55" y="629" font-size="10.5" fill="#6B7280" font-style="italic">Token Verification API returns 200 / 403; the CDN chooses the response</text>
+    <circle cx="65" cy="652" r="3" fill="#F39200"/>
+    <text x="75" y="656" font-size="10.5" fill="#1A1A1A">Deny — block the session outright</text>
+    <circle cx="65" cy="672" r="3" fill="#F39200"/>
+    <text x="75" y="676" font-size="10.5" fill="#1A1A1A">Degrade — low-bitrate variant</text>
+    <circle cx="65" cy="692" r="3" fill="#F39200"/>
+    <text x="75" y="696" font-size="10.5" fill="#1A1A1A">Redirect — subscription sign-up</text>
+    <circle cx="305" cy="652" r="3" fill="#F39200"/>
+    <text x="315" y="656" font-size="10.5" fill="#1A1A1A">Replace — targeted ads / watermark</text>
+    <circle cx="305" cy="672" r="3" fill="#F39200"/>
+    <text x="315" y="676" font-size="10.5" fill="#1A1A1A">Log-only — observe before enforcing</text>
+    <circle cx="305" cy="692" r="3" fill="#F39200"/>
+    <text x="315" y="696" font-size="10.5" fill="#1A1A1A">Custom — any CDN-configurable response</text>
+  </g>
+
+  <!-- Detection signals panel -->
+  <g>
+    <rect x="615" y="590" width="625" height="120" rx="8" fill="#F4F7FA" stroke="#CBD5E0" stroke-width="1"/>
+    <text x="630" y="613" font-size="13" font-weight="700" fill="#0A4D8C">Detection signals (evaluated in the Token Verification API)</text>
+    <text x="630" y="629" font-size="10.5" fill="#6B7280" font-style="italic">Output is always binary: allow (200) or deny (403)</text>
+    <circle cx="640" cy="652" r="3" fill="#0A4D8C"/>
+    <text x="650" y="656" font-size="11.5" fill="#1A1A1A">Token request rate per window</text>
+    <circle cx="640" cy="672" r="3" fill="#0A4D8C"/>
+    <text x="650" y="676" font-size="11.5" fill="#1A1A1A">Distinct user-IDs sharing one token</text>
+    <circle cx="640" cy="692" r="3" fill="#0A4D8C"/>
+    <text x="650" y="696" font-size="11.5" fill="#1A1A1A">Geo / path / IP policy rules</text>
+    <circle cx="930" cy="652" r="3" fill="#0A4D8C"/>
+    <text x="940" y="656" font-size="11.5" fill="#1A1A1A">Whitelist &amp; custom business logic</text>
+    <circle cx="930" cy="672" r="3" fill="#0A4D8C"/>
+    <text x="940" y="676" font-size="11.5" fill="#1A1A1A">Ban list (instant global enforcement)</text>
+    <circle cx="930" cy="692" r="3" fill="#0A4D8C"/>
+    <text x="940" y="696" font-size="11.5" fill="#1A1A1A">Token expiry &amp; signature validation</text>
+  </g>
+</svg>
