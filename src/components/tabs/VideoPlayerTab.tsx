@@ -121,9 +121,20 @@ export default function VideoPlayerTab() {
       conf.analytics = { key: '45adcf9b-8f7c-4e28-91c5-50ba3d442cd4', videoId: 'amp-v2-demo' }
     }
 
-    const player = new bitmovinNs.player.Player(playerRef.current, conf)
-    playerInstanceRef.current = player
-    player.load(source).catch(() => setPlayerError('Failed to load stream'))
+    try {
+      const player = new bitmovinNs.player.Player(playerRef.current, conf)
+      playerInstanceRef.current = player
+      player.load(source).catch((err: { code?: number; name?: string; message?: string }) => {
+        const msg = err?.name || err?.message || ''
+        if (err?.code === 1016 || msg.includes('LICENSE') || msg.includes('ALLOWLIST')) {
+          setPlayerError('LICENSE')
+        } else {
+          setPlayerError('Failed to load stream')
+        }
+      })
+    } catch {
+      setPlayerError('LICENSE')
+    }
   }
 
   function loadCustomStream() {
@@ -167,7 +178,28 @@ export default function VideoPlayerTab() {
           {/* Player + Source Selector */}
           <div className="flex flex-col lg:flex-row gap-6">
             <div className="flex-[2]">
-              {playerError ? (
+              {playerError === 'LICENSE' ? (
+                <div className="bg-gray-900 rounded-lg aspect-video flex items-center justify-center relative overflow-hidden">
+                  <div className="text-center px-8">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/10 flex items-center justify-center">
+                      <svg className="w-8 h-8 text-white/60" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                    </div>
+                    <p className="text-white/80 font-semibold mb-1">Adaptive Media Player v2</p>
+                    <p className="text-white/50 text-xs max-w-sm">
+                      Set <code className="bg-white/10 px-1.5 py-0.5 rounded text-white/70">VITE_BITMOVIN_KEY</code> in your <code className="bg-white/10 px-1.5 py-0.5 rounded text-white/70">.env</code> file with a licensed key that allowlists this domain.
+                    </p>
+                    <div className="mt-4 flex items-center justify-center gap-2">
+                      <div className="w-2 h-2 bg-akamai-blue rounded-full animate-pulse" />
+                      <span className="text-white/40 text-xs">Selected: {selectedSource}</span>
+                    </div>
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-black/60 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-white rounded-full" />
+                    <div className="flex-1 h-1 bg-white/20 rounded-full"><div className="w-[35%] h-full bg-akamai-blue rounded-full" /></div>
+                    <span className="text-white text-[10px]">0:00 / 3:45</span>
+                  </div>
+                </div>
+              ) : playerError ? (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
                   <p className="text-red-600 font-medium">{playerError}</p>
                 </div>
@@ -241,7 +273,19 @@ export default function VideoPlayerTab() {
             </div>
           </div>
 
-          <div ref={playerRef} className="rounded-lg overflow-hidden bg-black aspect-video max-w-4xl mx-auto" />
+          {playerError === 'LICENSE' ? (
+            <div className="bg-gray-900 rounded-lg aspect-video max-w-4xl mx-auto flex items-center justify-center">
+              <div className="text-center px-8">
+                <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-white/10 flex items-center justify-center">
+                  <svg className="w-7 h-7 text-white/60" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                </div>
+                <p className="text-white/80 font-semibold mb-1">AMP v2 — License Required</p>
+                <p className="text-white/50 text-xs max-w-sm">Set <code className="bg-white/10 px-1.5 py-0.5 rounded text-white/70">VITE_BITMOVIN_KEY</code> with a key that allowlists this domain.</p>
+              </div>
+            </div>
+          ) : (
+            <div ref={playerRef} className="rounded-lg overflow-hidden bg-black aspect-video max-w-4xl mx-auto" />
+          )}
         </>
       )}
 
