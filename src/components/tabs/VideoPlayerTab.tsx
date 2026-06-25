@@ -105,27 +105,60 @@ export default function VideoPlayerTab() {
     destroyPlayer()
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const bitmovinNs = (window as unknown as Record<string, unknown>).bitmovin as { player?: { Player: new (el: HTMLElement, conf: Record<string, unknown>) => { load: (s: Record<string, unknown>) => Promise<void>; destroy: () => void } }; analytics?: { PlayerModule: unknown } } | undefined
-    if (!bitmovinNs?.player) return
+    const bm = (window as unknown as Record<string, unknown>).bitmovin as Record<string, unknown> | undefined
+    const playerNs = bm?.player as Record<string, unknown> | undefined
+    const analyticsNs = bm?.analytics as Record<string, unknown> | undefined
+    const PlayerClass = playerNs?.Player as (new (el: HTMLElement, conf: Record<string, unknown>) => Record<string, unknown>) | undefined
+    const PlayerEvent = playerNs?.PlayerEvent as Record<string, string> | undefined
+    if (!PlayerClass) return
 
     const conf: Record<string, unknown> = {
       key: bitmovinKey,
       playback: { muted: true, autoplay: false },
     }
 
-    if (bitmovinNs.analytics?.PlayerModule) {
+    if (analyticsNs?.PlayerModule) {
       try {
-        (bitmovinNs.player.Player as unknown as { addModule: (m: unknown) => void }).addModule(bitmovinNs.analytics.PlayerModule)
+        (PlayerClass as unknown as { addModule: (m: unknown) => void }).addModule(analyticsNs.PlayerModule)
       } catch { /* module already added */ }
       conf.analytics = { key: '45adcf9b-8f7c-4e28-91c5-50ba3d442cd4', videoId: 'amp-v2-demo' }
     }
 
     try {
-      const player = new bitmovinNs.player.Player(playerRef.current, conf)
+      const player = new PlayerClass(playerRef.current, conf)
       playerInstanceRef.current = player
-      player.load(source).catch((err: { code?: number; name?: string; message?: string }) => {
-        const msg = err?.name || err?.message || ''
-        if (err?.code === 1016 || msg.includes('LICENSE') || msg.includes('ALLOWLIST')) {
+
+      const isLicenseError = (err: Record<string, unknown>) => {
+        const code = err?.code as number | undefined
+        const name = (err?.name || '') as string
+        const msg = (err?.message || '') as string
+        return code === 1016 || name.includes('LICENSE') || name.includes('ALLOWLIST') ||
+               msg.includes('LICENSE') || msg.includes('ALLOWLIST') || msg.includes('allowlist') ||
+               msg.includes('not allowlisted')
+      }
+
+      if (PlayerEvent?.Error) {
+        (player as { on: (e: string, cb: (err: Record<string, unknown>) => void) => void }).on(
+          PlayerEvent.Error, (err) => {
+            if (isLicenseError(err?.data as Record<string, unknown> || err)) {
+              setPlayerError('LICENSE')
+            }
+          }
+        )
+      }
+      if (PlayerEvent?.Warning) {
+        (player as { on: (e: string, cb: (err: Record<string, unknown>) => void) => void }).on(
+          PlayerEvent.Warning, (err) => {
+            if (isLicenseError(err?.data as Record<string, unknown> || err)) {
+              setPlayerError('LICENSE')
+            }
+          }
+        )
+      }
+
+      const load = player.load as (s: Record<string, unknown>) => Promise<void>
+      load.call(player, source).catch((err: Record<string, unknown>) => {
+        if (isLicenseError(err)) {
           setPlayerError('LICENSE')
         } else {
           setPlayerError('Failed to load stream')
