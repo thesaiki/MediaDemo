@@ -51,6 +51,11 @@ export default function VideoPlayerTab() {
   const [selectedSource, setSelectedSource] = useState<SourceKey>('Art of Motion (DASH)')
   const [customUrl, setCustomUrl] = useState('')
   const [customFormat, setCustomFormat] = useState<StreamFormat>('hls')
+  const [subtitleUrl, setSubtitleUrl] = useState('')
+  const [subtitleLabel, setSubtitleLabel] = useState('English')
+  const [mmEnabled, setMmEnabled] = useState(false)
+  const [mmCustomerId, setMmCustomerId] = useState(import.meta.env.VITE_MM_CUSTOMER_ID || '')
+  const [mmSubscriberId, setMmSubscriberId] = useState('')
   const [playerLoaded, setPlayerLoaded] = useState(false)
   const [playerError, setPlayerError] = useState('')
   const playerRef = useRef<HTMLDivElement>(null)
@@ -172,6 +177,11 @@ export default function VideoPlayerTab() {
   function loadCustomStream() {
     if (!customUrl.trim()) return
     const source: Record<string, unknown> = { [customFormat]: customUrl.trim() }
+    if (subtitleUrl.trim()) {
+      source.subtitle = {
+        tracks: [{ id: 'sub1', url: subtitleUrl.trim(), label: subtitleLabel || 'English', lang: 'en', kind: 'subtitle' }],
+      }
+    }
     loadSource(source)
   }
 
@@ -268,9 +278,11 @@ export default function VideoPlayerTab() {
           {/* Stream Tester */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h3 className="font-semibold text-gray-800 mb-1">Test Your Stream</h3>
-            <p className="text-xs text-gray-500 mb-4">Paste any HLS, DASH, or Progressive stream URL to test playback with AMP v2.</p>
+            <p className="text-xs text-gray-500 mb-4">Configure stream, subtitles, and analytics — then load everything together.</p>
 
-            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            {/* Stream URL */}
+            <div className="mb-4">
+              <label className="text-xs font-semibold text-gray-700 block mb-1.5">Stream Format</label>
               <div className="flex gap-2">
                 {(['hls', 'dash', 'progressive'] as const).map(f => (
                   <button
@@ -287,22 +299,98 @@ export default function VideoPlayerTab() {
                 ))}
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="mb-5">
+              <label className="text-xs font-semibold text-gray-700 block mb-1.5">Stream URL</label>
               <input
                 type="text"
                 value={customUrl}
                 onChange={e => setCustomUrl(e.target.value)}
                 placeholder={customFormat === 'hls' ? 'https://example.com/stream.m3u8' : customFormat === 'dash' ? 'https://example.com/manifest.mpd' : 'https://example.com/video.mp4'}
-                className="flex-1 border border-gray-300 rounded px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-akamai-blue/30 focus:border-akamai-blue"
-                onKeyDown={e => e.key === 'Enter' && loadCustomStream()}
+                className="w-full border border-gray-300 rounded px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-akamai-blue/30 focus:border-akamai-blue"
               />
-              <button
-                onClick={loadCustomStream}
-                className="bg-akamai-blue text-white px-5 py-2.5 rounded text-sm font-medium hover:bg-akamai-dark transition-colors whitespace-nowrap"
-              >
-                Load Stream
-              </button>
             </div>
+
+            {/* Subtitles / Captions */}
+            <div className="mb-5 border-t border-gray-100 pt-4">
+              <label className="text-xs font-semibold text-gray-700 block mb-1.5">Subtitles / Captions (VTT)</label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  value={subtitleUrl}
+                  onChange={e => setSubtitleUrl(e.target.value)}
+                  placeholder="https://example.com/captions.vtt"
+                  className="flex-[2] border border-gray-300 rounded px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-akamai-blue/30 focus:border-akamai-blue"
+                />
+                <input
+                  type="text"
+                  value={subtitleLabel}
+                  onChange={e => setSubtitleLabel(e.target.value)}
+                  placeholder="Label (e.g. English)"
+                  className="flex-1 border border-gray-300 rounded px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-akamai-blue/30 focus:border-akamai-blue"
+                />
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1.5">WebVTT (.vtt) subtitle or caption file URL. Loaded as a side-car track alongside the stream.</p>
+            </div>
+
+            {/* MediaMelon Analytics */}
+            <div className="mb-5 border-t border-gray-100 pt-4">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold text-gray-700">MediaMelon Analytics</label>
+                <button
+                  onClick={() => setMmEnabled(!mmEnabled)}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${mmEnabled ? 'bg-akamai-blue' : 'bg-gray-300'}`}
+                >
+                  <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${mmEnabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
+              {mmEnabled && (
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1">
+                      <label className="text-[10px] text-gray-500 block mb-1">Customer ID</label>
+                      <input
+                        type="text"
+                        value={mmCustomerId}
+                        onChange={e => setMmCustomerId(e.target.value)}
+                        placeholder="MediaMelon Customer ID"
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-akamai-blue/30 focus:border-akamai-blue"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[10px] text-gray-500 block mb-1">Subscriber ID</label>
+                      <input
+                        type="text"
+                        value={mmSubscriberId}
+                        onChange={e => setMmSubscriberId(e.target.value)}
+                        placeholder="Optional — viewer identifier"
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-akamai-blue/30 focus:border-akamai-blue"
+                      />
+                    </div>
+                  </div>
+                  <div className="bg-gray-900 rounded p-3 font-mono text-[10px] text-green-300 leading-relaxed overflow-x-auto">
+                    <div className="text-gray-500">{'// MediaMelon SDK initialization'}</div>
+                    <div>{'const mmConfig = {'}</div>
+                    <div>&nbsp;&nbsp;customerID: <span className="text-yellow-300">"{mmCustomerId || 'YOUR_CUSTOMER_ID'}"</span>,</div>
+                    <div>&nbsp;&nbsp;playerName: <span className="text-yellow-300">"AMP-v2"</span>,</div>
+                    <div>&nbsp;&nbsp;playerBrand: <span className="text-yellow-300">"Bitmovin"</span>,</div>
+                    <div>&nbsp;&nbsp;domainName: <span className="text-yellow-300">"{typeof window !== 'undefined' ? window.location.host : 'example.com'}"</span>,</div>
+                    {mmSubscriberId && <div>&nbsp;&nbsp;subscriberID: <span className="text-yellow-300">"{mmSubscriberId}"</span>,</div>}
+                    <div>{'};'}</div>
+                    <div className="text-gray-500">{'// Attach to player after load'}</div>
+                    <div>{'mmSmartStreaming.init(player, mmConfig);'}</div>
+                  </div>
+                  <p className="text-[10px] text-gray-400">QoE metrics (startup time, rebuffer ratio, bitrate, errors) will be sent to the MediaMelon SmartSight dashboard.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Load Button */}
+            <button
+              onClick={loadCustomStream}
+              className="w-full bg-akamai-blue text-white px-5 py-3 rounded-lg text-sm font-semibold hover:bg-akamai-dark transition-colors"
+            >
+              Load Settings
+            </button>
           </div>
 
           {!bitmovinKey || playerError === 'LICENSE' ? (
