@@ -4,3 +4,4 @@ dist
 .superpowers
 .claude
 docs/superpowers
+*.tsbuildinfo
