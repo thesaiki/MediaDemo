@@ -17,7 +17,7 @@ const TABS = [
   { id: 'vod', label: 'VOD Architecture' },
   { id: 'live', label: 'Live Architecture' },
   { id: 'encoding', label: 'Encoding' },
-  { id: 'player', label: 'Video Player' },
+  { id: 'player', label: 'AMP v2' },
   { id: 'channels', label: 'Virtual Channels' },
   { id: 'antipiracy', label: 'MCAP' },
   { id: 'analytics', label: 'Analytics' },
