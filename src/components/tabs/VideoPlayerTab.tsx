@@ -26,19 +26,18 @@ const DEMO_SOURCES = {
     poster: 'https://cdn.bitmovin.com/content/assets/art-of-motion-dash-hls-progressive/poster.jpg',
     drm: { widevine: { LA_URL: 'https://cwip-shaka-proxy.appspot.com/no_auth' } },
   },
-  'SSAI Demo': {
-    dash: 'https://bitmovin-a.akamaihd.net/498364_fcb0257026d0bd3ee0ba3aad95674188/manifest.mpd',
-    hls: 'https://bitmovin-a.akamaihd.net/498364_fcb0257026d0bd3ee0ba3aad95674188/playlist.m3u8',
-    poster: 'https://bitmovin-a.akamaihd.net/498364_fcb0257026d0bd3ee0ba3aad95674188/poster.jpg',
-  },
   'Akamai Live (HLS)': {
-    hls: 'https://low-latency-demo.akamaized.net/live/media0/demonab/hls-r/demonab.m3u8',
+    hls: 'https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8',
   },
-  'Akamai Live (DASH)': {
-    dash: 'https://low-latency-demo.akamaized.net/live/media0/demonab/dash-r/demonab.mpd',
+  'Akamai VOD — Big Buck Bunny (DASH)': {
+    dash: 'https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd',
+    poster: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Big_buck_bunny_poster_big.jpg/800px-Big_buck_bunny_poster_big.jpg',
   },
-  'Akamai VOD (HEVC 4K)': {
+  'Akamai VOD — HEVC 4K': {
     dash: 'https://linode-vod-obj.akamaized.net/ateme/tos4k/cmaf/hevc/manifest.mpd',
+  },
+  'Tears of Steel (HLS)': {
+    hls: 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8',
   },
 }
 
