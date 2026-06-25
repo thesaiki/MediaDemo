@@ -37,3 +37,76 @@ Copy `.env.example` to `.env` and fill in your keys to activate player, dashboar
 ```bash
 npm run build
 ```
+
+## Deploy to Linode
+
+### Prerequisites
+
+- A Linode instance (Ubuntu/Debian) with SSH access
+- A domain/hostname pointed to the Linode IP
+- Node.js 18+ installed on the server (or build locally and copy `dist/`)
+
+### Option 1: Build locally, deploy static files
+
+```bash
+# Build production bundle
+npm run build
+
+# Copy dist to server
+scp -r dist/* root@<LINODE_IP>:/var/www/mediademo/
+
+# SSH into server and configure nginx
+ssh root@<LINODE_IP>
+```
+
+### Option 2: Build on server
+
+```bash
+ssh root@<LINODE_IP>
+
+# Install Node.js (if not installed)
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+apt-get install -y nodejs
+
+# Clone and build
+git clone https://github.com/thesaiki/MediaDemo.git /opt/mediademo
+cd /opt/mediademo
+npm install
+cp .env.example .env   # Edit with your keys
+npm run build
+```
+
+### Nginx configuration
+
+```bash
+apt-get install -y nginx
+
+cat > /etc/nginx/sites-available/mediademo <<'NGINX'
+server {
+    listen 80;
+    server_name mediademo.fde-demo.com;
+    root /var/www/mediademo;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location ~* \.(js|css|svg|png|jpg|ico|woff2?)$ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+}
+NGINX
+
+ln -sf /etc/nginx/sites-available/mediademo /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+nginx -t && systemctl reload nginx
+```
+
+### Optional: HTTPS with Let's Encrypt
+
+```bash
+apt-get install -y certbot python3-certbot-nginx
+certbot --nginx -d mediademo.fde-demo.com
+```
