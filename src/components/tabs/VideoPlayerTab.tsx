@@ -55,7 +55,7 @@ export default function VideoPlayerTab() {
   const [playerError, setPlayerError] = useState('')
   const playerRef = useRef<HTMLDivElement>(null)
   const playerInstanceRef = useRef<unknown>(null)
-  const bitmovinKey = import.meta.env.VITE_BITMOVIN_KEY || '29ba4a30-8b5e-4336-a7dd-c94ff3b25f30'
+  const bitmovinKey = import.meta.env.VITE_BITMOVIN_KEY
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -81,7 +81,7 @@ export default function VideoPlayerTab() {
   }, [])
 
   useEffect(() => {
-    if (!playerLoaded) return
+    if (!playerLoaded || !bitmovinKey) return
     const timer = setTimeout(() => {
       if (!playerRef.current) return
       if (mode === 'features') { destroyPlayer(); return }
@@ -210,7 +210,7 @@ export default function VideoPlayerTab() {
           {/* Player + Source Selector */}
           <div className="flex flex-col lg:flex-row gap-6">
             <div className="flex-[2]">
-              {playerError === 'LICENSE' ? (
+              {!bitmovinKey || playerError === 'LICENSE' ? (
                 <div className="bg-gray-900 rounded-lg aspect-video flex items-center justify-center relative overflow-hidden">
                   <div className="text-center px-8">
                     <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/10 flex items-center justify-center">
@@ -305,7 +305,7 @@ export default function VideoPlayerTab() {
             </div>
           </div>
 
-          {playerError === 'LICENSE' ? (
+          {!bitmovinKey || playerError === 'LICENSE' ? (
             <div className="bg-gray-900 rounded-lg aspect-video max-w-4xl mx-auto flex items-center justify-center">
               <div className="text-center px-8">
                 <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-white/10 flex items-center justify-center">
