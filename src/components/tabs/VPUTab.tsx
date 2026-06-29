@@ -153,7 +153,20 @@ ffmpeg -i input_8k.mp4 -c:v av1_ni_quadra -b:v 20M output_av1.mp4`}
           Side-by-side comparison of video transcoding on CPU vs VPU. Watch the terminal output and resource utilization in real-time to see the performance difference.
         </p>
 
-        {/* CPU Transcoding */}
+        {/* Placeholder: Demo Status */}
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-5">
+          <div className="flex items-start gap-3">
+            <span className="text-amber-600 text-lg">&#9888;</span>
+            <div>
+              <p className="text-sm font-semibold text-amber-800">Demo Environment — Setup Required</p>
+              <p className="text-xs text-amber-700 mt-1">
+                Two Linode instances (one CPU-only, one with VPU) with Wetty web terminals need to be provisioned and configured. See the setup steps below.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Demo Layout Preview */}
         <div className="grid md:grid-cols-2 gap-4 mb-4">
           <div className="border border-gray-200 rounded-lg overflow-hidden">
             <div className="bg-red-600 text-white px-4 py-2 font-bold text-center text-sm">Transcoding on CPU</div>
@@ -162,9 +175,9 @@ ffmpeg -i input_8k.mp4 -c:v av1_ni_quadra -b:v 20M output_av1.mp4`}
             ) : (
               <div className="bg-gray-900 flex items-center justify-center text-center" style={{ height: '260px' }}>
                 <div className="px-6">
-                  <div className="text-3xl mb-2">🖥️</div>
-                  <p className="text-white/70 text-sm font-medium">CPU Terminal</p>
-                  <p className="text-white/40 text-xs mt-1">Set <code className="bg-white/10 px-1 rounded">VITE_VPU_CPU_VM_URL</code></p>
+                  <p className="text-white/70 text-sm font-medium mb-1">CPU Transcoding Terminal</p>
+                  <p className="text-white/40 text-[10px]">ffmpeg running libx264 software encoder</p>
+                  <p className="text-white/30 text-[10px] mt-2">Pending: Wetty terminal on CPU instance</p>
                 </div>
               </div>
             )}
@@ -176,16 +189,14 @@ ffmpeg -i input_8k.mp4 -c:v av1_ni_quadra -b:v 20M output_av1.mp4`}
             ) : (
               <div className="bg-gray-900 flex items-center justify-center text-center" style={{ height: '260px' }}>
                 <div className="px-6">
-                  <div className="text-3xl mb-2">📊</div>
-                  <p className="text-white/70 text-sm font-medium">CPU Metrics</p>
-                  <p className="text-white/40 text-xs mt-1">htop / resource monitor</p>
+                  <p className="text-white/70 text-sm font-medium mb-1">CPU Metrics</p>
+                  <p className="text-white/40 text-[10px]">htop showing high CPU usage during transcode</p>
+                  <p className="text-white/30 text-[10px] mt-2">Pending: Wetty terminal on CPU instance</p>
                 </div>
               </div>
             )}
           </div>
         </div>
-
-        {/* VPU Transcoding */}
         <div className="grid md:grid-cols-2 gap-4">
           <div className="border border-gray-200 rounded-lg overflow-hidden">
             <div className="bg-emerald-600 text-white px-4 py-2 font-bold text-center text-sm">Transcoding on VPU</div>
@@ -194,9 +205,9 @@ ffmpeg -i input_8k.mp4 -c:v av1_ni_quadra -b:v 20M output_av1.mp4`}
             ) : (
               <div className="bg-gray-900 flex items-center justify-center text-center" style={{ height: '260px' }}>
                 <div className="px-6">
-                  <div className="text-3xl mb-2">⚡</div>
-                  <p className="text-white/70 text-sm font-medium">VPU Terminal</p>
-                  <p className="text-white/40 text-xs mt-1">Set <code className="bg-white/10 px-1 rounded">VITE_VPU_VPU_VM_URL</code></p>
+                  <p className="text-white/70 text-sm font-medium mb-1">VPU Transcoding Terminal</p>
+                  <p className="text-white/40 text-[10px]">ffmpeg running h264_ni_quadra hardware encoder</p>
+                  <p className="text-white/30 text-[10px] mt-2">Pending: Wetty terminal on VPU instance</p>
                 </div>
               </div>
             )}
@@ -208,13 +219,130 @@ ffmpeg -i input_8k.mp4 -c:v av1_ni_quadra -b:v 20M output_av1.mp4`}
             ) : (
               <div className="bg-gray-900 flex items-center justify-center text-center" style={{ height: '260px' }}>
                 <div className="px-6">
-                  <div className="text-3xl mb-2">📊</div>
-                  <p className="text-white/70 text-sm font-medium">VPU Metrics</p>
-                  <p className="text-white/40 text-xs mt-1">htop / ni_rsrc_mon</p>
+                  <p className="text-white/70 text-sm font-medium mb-1">VPU Metrics</p>
+                  <p className="text-white/40 text-[10px]">htop + ni_rsrc_mon showing low CPU, VPU offload</p>
+                  <p className="text-white/30 text-[10px] mt-2">Pending: Wetty terminal on VPU instance</p>
                 </div>
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Setup Steps */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h2 className="text-lg font-bold text-gray-800 mb-4">Demo Setup Steps</h2>
+
+        <div className="space-y-5">
+          {/* Step 1 */}
+          <div className="flex gap-4">
+            <div className="shrink-0 w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold">1</div>
+            <div>
+              <h4 className="font-semibold text-sm text-gray-800">Provision Two Linode Instances</h4>
+              <p className="text-xs text-gray-600 mt-1 mb-2">One standard compute (CPU-only) and one Accelerated Compute (VPU) instance in the same region.</p>
+              <pre className="bg-gray-900 rounded p-3 text-[10px] text-green-300 overflow-x-auto font-mono leading-relaxed">{`# CPU instance (standard compute)
+linode-cli linodes create --type g6-standard-4 --region us-iad \\
+  --image linode/ubuntu24.04 --label cpu-transcode --root_pass <password>
+
+# VPU instance (accelerated compute)
+linode-cli linodes create --type g1-accelerated-netint-1 --region us-iad \\
+  --image linode/ubuntu24.04 --label vpu-transcode --root_pass <password>`}</pre>
+            </div>
+          </div>
+
+          {/* Step 2 */}
+          <div className="flex gap-4">
+            <div className="shrink-0 w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold">2</div>
+            <div>
+              <h4 className="font-semibold text-sm text-gray-800">Install FFmpeg on Both Instances</h4>
+              <p className="text-xs text-gray-600 mt-1 mb-2">Standard FFmpeg on CPU instance, NETINT-enabled FFmpeg on VPU instance.</p>
+              <pre className="bg-gray-900 rounded p-3 text-[10px] text-green-300 overflow-x-auto font-mono leading-relaxed">{`# CPU instance — standard FFmpeg
+apt-get update && apt-get install -y ffmpeg
+
+# VPU instance — NETINT-enabled FFmpeg
+# Follow NETINT Quadra SDK installation guide:
+# 1. Install NETINT Quadra driver and firmware
+# 2. Build FFmpeg with --enable-libnetint
+# 3. Verify: ffmpeg -encoders | grep ni_quadra`}</pre>
+            </div>
+          </div>
+
+          {/* Step 3 */}
+          <div className="flex gap-4">
+            <div className="shrink-0 w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold">3</div>
+            <div>
+              <h4 className="font-semibold text-sm text-gray-800">Install Wetty (Web Terminal) on Both Instances</h4>
+              <p className="text-xs text-gray-600 mt-1 mb-2">Wetty provides browser-based SSH access for the live demo panels.</p>
+              <pre className="bg-gray-900 rounded p-3 text-[10px] text-green-300 overflow-x-auto font-mono leading-relaxed">{`# On both instances
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+apt-get install -y nodejs
+npm install -g wetty
+
+# Start Wetty (use tmux/systemd to keep it running)
+wetty --port 3000 --host 0.0.0.0 --base /wetty`}</pre>
+            </div>
+          </div>
+
+          {/* Step 4 */}
+          <div className="flex gap-4">
+            <div className="shrink-0 w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold">4</div>
+            <div>
+              <h4 className="font-semibold text-sm text-gray-800">Upload a Test Video to Both Instances</h4>
+              <p className="text-xs text-gray-600 mt-1 mb-2">Use the same source file on both to ensure a fair comparison.</p>
+              <pre className="bg-gray-900 rounded p-3 text-[10px] text-green-300 overflow-x-auto font-mono leading-relaxed">{`# Download a test file (Tears of Steel 4K)
+wget -O /root/test_4k.mp4 \\
+  "https://download.blender.org/demo/movies/ToS/tears_of_steel_720p.mkv"
+
+# Or use your own content via SCP
+scp source_4k.mp4 root@<instance-ip>:/root/test_4k.mp4`}</pre>
+            </div>
+          </div>
+
+          {/* Step 5 */}
+          <div className="flex gap-4">
+            <div className="shrink-0 w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold">5</div>
+            <div>
+              <h4 className="font-semibold text-sm text-gray-800">Prepare Demo Scripts</h4>
+              <p className="text-xs text-gray-600 mt-1 mb-2">Create scripts on each instance that start transcoding + resource monitoring when triggered.</p>
+              <pre className="bg-gray-900 rounded p-3 text-[10px] text-green-300 overflow-x-auto font-mono leading-relaxed">{`# /root/run_demo.sh (CPU instance)
+#!/bin/bash
+tmux new-session -d -s demo
+tmux send-keys -t demo "ffmpeg -i /root/test_4k.mp4 -c:v libx264 \\
+  -preset medium -b:v 4M -f null /dev/null" Enter
+tmux split-window -t demo
+tmux send-keys -t demo "htop" Enter
+
+# /root/run_demo.sh (VPU instance)
+#!/bin/bash
+tmux new-session -d -s demo
+tmux send-keys -t demo "ffmpeg -i /root/test_4k.mp4 -c:v h264_ni_quadra \\
+  -b:v 4M -f null /dev/null" Enter
+tmux split-window -t demo
+tmux send-keys -t demo "htop" Enter`}</pre>
+            </div>
+          </div>
+
+          {/* Step 6 */}
+          <div className="flex gap-4">
+            <div className="shrink-0 w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold">6</div>
+            <div>
+              <h4 className="font-semibold text-sm text-gray-800">Configure Environment Variables &amp; Deploy</h4>
+              <p className="text-xs text-gray-600 mt-1 mb-2">Point the demo app at your Wetty endpoints and rebuild.</p>
+              <pre className="bg-gray-900 rounded p-3 text-[10px] text-green-300 overflow-x-auto font-mono leading-relaxed">{`# .env
+VITE_VPU_CPU_VM_URL=https://cpuvm.your-domain.com/wetty
+VITE_VPU_VPU_VM_URL=https://vpuvm.your-domain.com/wetty
+
+# Rebuild and deploy
+npm run build
+scp -r dist/* root@172.232.27.231:/var/www/mediademo/`}</pre>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+          <p className="text-xs text-emerald-800">
+            <strong>During the demo:</strong> SSH into each instance via Wetty in the browser, run the demo script, and viewers see the CPU instance maxing out at 90%+ CPU while the VPU instance stays below 10% CPU — the VPU handles the encoding workload in dedicated hardware.
+          </p>
         </div>
       </div>
 
