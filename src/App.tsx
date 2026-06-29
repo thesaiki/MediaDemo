@@ -8,6 +8,7 @@ const LiveArchitectureTab = lazy(() => import('./components/tabs/LiveArchitectur
 const EncodingTab = lazy(() => import('./components/tabs/EncodingTab'))
 const VideoPlayerTab = lazy(() => import('./components/tabs/VideoPlayerTab'))
 const VirtualChannelsTab = lazy(() => import('./components/tabs/VirtualChannelsTab'))
+const VPUTab = lazy(() => import('./components/tabs/VPUTab'))
 const AntiPiracyTab = lazy(() => import('./components/tabs/AntiPiracyTab'))
 const AnalyticsTab = lazy(() => import('./components/tabs/AnalyticsTab'))
 const CloudinaryTab = lazy(() => import('./components/tabs/CloudinaryTab'))
@@ -19,6 +20,7 @@ const TABS = [
   { id: 'encoding', label: 'Encoding' },
   { id: 'player', label: 'AMP v2' },
   { id: 'channels', label: 'Virtual Channels' },
+  { id: 'vpu', label: 'VPU' },
   { id: 'antipiracy', label: 'MCAP' },
   { id: 'analytics', label: 'Analytics' },
   { id: 'cloudinary', label: 'Cloudinary' },
@@ -53,9 +55,10 @@ export default function App() {
       case 3: return <Suspense fallback={fallback}><EncodingTab /></Suspense>
       case 4: return <Suspense fallback={fallback}><VideoPlayerTab /></Suspense>
       case 5: return <Suspense fallback={fallback}><VirtualChannelsTab /></Suspense>
-      case 6: return <Suspense fallback={fallback}><AntiPiracyTab /></Suspense>
-      case 7: return <Suspense fallback={fallback}><AnalyticsTab /></Suspense>
-      case 8: return <Suspense fallback={fallback}><CloudinaryTab /></Suspense>
+      case 6: return <Suspense fallback={fallback}><VPUTab /></Suspense>
+      case 7: return <Suspense fallback={fallback}><AntiPiracyTab /></Suspense>
+      case 8: return <Suspense fallback={fallback}><AnalyticsTab /></Suspense>
+      case 9: return <Suspense fallback={fallback}><CloudinaryTab /></Suspense>
       default: return null
     }
   }
