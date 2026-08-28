@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 
 type StreamFormat = 'hls' | 'dash' | 'progressive'
-type DemoMode = 'player' | 'stream-test' | 'features'
+type DemoMode = 'player' | 'stream-test' | 'captions' | 'dubbing' | 'features'
+type DubLang = 'es' | 'hi'
 
 const DEMO_SOURCES = {
   'Art of Motion (DASH)': {
@@ -46,6 +47,40 @@ type SourceKey = keyof typeof DEMO_SOURCES
 const PLAYER_CDN = 'https://cdn.bitmovin.com/player/web/8/bitmovinplayer.js'
 const ANALYTICS_CDN = 'https://cdn.bitmovin.com/analytics/web/2/bitmovinanalytics.min.js'
 
+// Original sample narration used to demonstrate the AI captions/dubbing pipeline.
+// Not a transcript of any of the demo videos' actual audio — this is a
+// representative script so the workflow can be shown end-to-end without a
+// backend ASR/translation service wired up.
+const SAMPLE_SCRIPT: { start: number; end: number; en: string; es: string; hi: string }[] = [
+  { start: 0, end: 4, en: 'Welcome to the Akamai media delivery showcase.', es: 'Bienvenido a la demostración de entrega de medios de Akamai.', hi: 'अकामाई मीडिया डिलीवरी शोकेस में आपका स्वागत है।' },
+  { start: 4, end: 8, en: 'This video demonstrates adaptive streaming in action.', es: 'Este video demuestra la transmisión adaptativa en acción.', hi: 'यह वीडियो एडेप्टिव स्ट्रीमिंग को क्रियान्वित होते हुए दिखाता है।' },
+  { start: 8, end: 12, en: 'Watch as the player adjusts quality to your connection.', es: 'Observa cómo el reproductor ajusta la calidad según tu conexión.', hi: 'देखें कि प्लेयर आपके कनेक्शन के अनुसार गुणवत्ता को कैसे समायोजित करता है।' },
+  { start: 12, end: 16, en: 'Captions and dubbing are generated using AI-powered pipelines.', es: 'Los subtítulos y el doblaje se generan mediante flujos de trabajo con inteligencia artificial.', hi: 'कैप्शन और डबिंग एआई-संचालित वर्कफ़्लो का उपयोग करके बनाए जाते हैं।' },
+  { start: 16, end: 20, en: "Thank you for exploring Akamai's media solutions.", es: 'Gracias por explorar las soluciones de medios de Akamai.', hi: 'अकामाई के मीडिया समाधानों को देखने के लिए धन्यवाद।' },
+]
+
+const CAPTION_STEPS = ['Extracting audio track', 'Running speech-to-text (ASR)', 'Detecting language', 'Aligning timestamps', 'Rendering WebVTT']
+const DUB_STEPS = ['Transcribing source audio (English)', 'Translating to target language', 'Synthesizing voice (TTS)', 'Muxing dubbed audio track']
+
+const LANG_LABELS: Record<DubLang, string> = { es: 'Spanish', hi: 'Hindi' }
+const LANG_LOCALE: Record<DubLang, string> = { es: 'es-ES', hi: 'hi-IN' }
+
+function formatVttTime(sec: number): string {
+  const h = Math.floor(sec / 3600).toString().padStart(2, '0')
+  const m = Math.floor((sec % 3600) / 60).toString().padStart(2, '0')
+  const s = Math.floor(sec % 60).toString().padStart(2, '0')
+  const ms = Math.round((sec % 1) * 1000).toString().padStart(3, '0')
+  return `${h}:${m}:${s}.${ms}`
+}
+
+function buildVtt(): string {
+  let vtt = 'WEBVTT\n\n'
+  SAMPLE_SCRIPT.forEach((line, i) => {
+    vtt += `${i + 1}\n${formatVttTime(line.start)} --> ${formatVttTime(line.end)}\n${line.en}\n\n`
+  })
+  return vtt
+}
+
 export default function VideoPlayerTab() {
   const [mode, setMode] = useState<DemoMode>('player')
   const [selectedSource, setSelectedSource] = useState<SourceKey>('Art of Motion (DASH)')
@@ -61,6 +96,25 @@ export default function VideoPlayerTab() {
   const playerRef = useRef<HTMLDivElement>(null)
   const playerInstanceRef = useRef<unknown>(null)
   const bitmovinKey = import.meta.env.VITE_BITMOVIN_KEY
+
+  // AI Captions state
+  const [captionSource, setCaptionSource] = useState<SourceKey>('Tears of Steel (HLS)')
+  const [captionStep, setCaptionStep] = useState(0)
+  const [captionsGenerating, setCaptionsGenerating] = useState(false)
+  const [captionsReady, setCaptionsReady] = useState(false)
+  const [activeCaptionLine, setActiveCaptionLine] = useState(-1)
+  const captionVttUrlRef = useRef<string | null>(null)
+
+  // AI Dubbing state
+  const [dubSource, setDubSource] = useState<SourceKey>('Tears of Steel (HLS)')
+  const [dubLang, setDubLang] = useState<DubLang>('es')
+  const [dubStep, setDubStep] = useState(0)
+  const [dubGenerating, setDubGenerating] = useState(false)
+  const [dubReady, setDubReady] = useState(false)
+  const [dubPlaying, setDubPlaying] = useState(false)
+  const [dubActiveLine, setDubActiveLine] = useState(-1)
+  const [voiceAvailable, setVoiceAvailable] = useState<boolean | null>(null)
+  const dubTimeoutsRef = useRef<number[]>([])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -82,19 +136,48 @@ export default function VideoPlayerTab() {
 
     return () => {
       destroyPlayer()
+      clearDubTimeouts()
+      if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel()
+      if (captionVttUrlRef.current) URL.revokeObjectURL(captionVttUrlRef.current)
     }
   }, [])
 
   useEffect(() => {
     if (!playerLoaded || !bitmovinKey) return
     const timer = setTimeout(() => {
-      if (!playerRef.current) return
-      if (mode === 'features') { destroyPlayer(); return }
-      loadSource(DEMO_SOURCES[selectedSource])
+      if (mode === 'player' || mode === 'stream-test') {
+        if (!playerRef.current) return
+        loadSource(DEMO_SOURCES[selectedSource])
+      } else {
+        destroyPlayer()
+      }
     }, 100)
     return () => clearTimeout(timer)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playerLoaded, selectedSource, mode])
+
+  // Check available speech-synthesis voices for the selected dub language
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) { setVoiceAvailable(false); return }
+    function checkVoices() {
+      const voices = window.speechSynthesis.getVoices()
+      setVoiceAvailable(voices.some(v => v.lang.toLowerCase().startsWith(dubLang)))
+    }
+    checkVoices()
+    window.speechSynthesis.onvoiceschanged = checkVoices
+  }, [dubLang])
+
+  // Poll playback time to highlight the active caption line
+  useEffect(() => {
+    if (mode !== 'captions' || !captionsReady) return
+    const id = setInterval(() => {
+      const inst = playerInstanceRef.current as { getCurrentTime?: () => number } | null
+      if (!inst?.getCurrentTime) return
+      const t = inst.getCurrentTime()
+      setActiveCaptionLine(SAMPLE_SCRIPT.findIndex(l => t >= l.start && t < l.end))
+    }, 300)
+    return () => clearInterval(id)
+  }, [mode, captionsReady])
 
   function destroyPlayer() {
     const inst = playerInstanceRef.current as { destroy?: () => void } | null
@@ -105,11 +188,15 @@ export default function VideoPlayerTab() {
     if (playerRef.current) playerRef.current.innerHTML = ''
   }
 
+  function clearDubTimeouts() {
+    dubTimeoutsRef.current.forEach(id => clearTimeout(id))
+    dubTimeoutsRef.current = []
+  }
+
   function loadSource(source: Record<string, unknown>) {
     if (!playerRef.current) return
     destroyPlayer()
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const bm = (window as unknown as Record<string, unknown>).bitmovin as Record<string, unknown> | undefined
     const playerNs = bm?.player as Record<string, unknown> | undefined
     const analyticsNs = bm?.analytics as Record<string, unknown> | undefined
@@ -185,6 +272,92 @@ export default function VideoPlayerTab() {
     loadSource(source)
   }
 
+  function generateCaptions() {
+    setCaptionsGenerating(true)
+    setCaptionsReady(false)
+    setActiveCaptionLine(-1)
+    setCaptionStep(0)
+    let step = 0
+    const interval = setInterval(() => {
+      step++
+      setCaptionStep(step)
+      if (step >= CAPTION_STEPS.length) {
+        clearInterval(interval)
+        if (captionVttUrlRef.current) URL.revokeObjectURL(captionVttUrlRef.current)
+        const blob = new Blob([buildVtt()], { type: 'text/vtt' })
+        const url = URL.createObjectURL(blob)
+        captionVttUrlRef.current = url
+        setCaptionsGenerating(false)
+        setCaptionsReady(true)
+        loadSource({
+          ...DEMO_SOURCES[captionSource],
+          subtitle: { tracks: [{ id: 'ai-cc', url, label: 'English (AI Generated)', lang: 'en', kind: 'subtitle' }] },
+        })
+      }
+    }, 650)
+  }
+
+  function downloadVtt() {
+    if (!captionVttUrlRef.current) return
+    const a = document.createElement('a')
+    a.href = captionVttUrlRef.current
+    a.download = 'ai-generated-captions.vtt'
+    a.click()
+  }
+
+  function generateDub() {
+    clearDubTimeouts()
+    if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel()
+    setDubGenerating(true)
+    setDubReady(false)
+    setDubPlaying(false)
+    setDubActiveLine(-1)
+    setDubStep(0)
+    let step = 0
+    const interval = setInterval(() => {
+      step++
+      setDubStep(step)
+      if (step >= DUB_STEPS.length) {
+        clearInterval(interval)
+        setDubGenerating(false)
+        setDubReady(true)
+        loadSource(DEMO_SOURCES[dubSource])
+      }
+    }, 650)
+  }
+
+  function playDubbedPreview() {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return
+    clearDubTimeouts()
+    window.speechSynthesis.cancel()
+    setDubPlaying(true)
+    setDubActiveLine(-1)
+
+    const inst = playerInstanceRef.current as { play?: () => void; seek?: (t: number) => void } | null
+    inst?.seek?.(0)
+    inst?.play?.()
+
+    SAMPLE_SCRIPT.forEach((line, i) => {
+      const text = dubLang === 'es' ? line.es : line.hi
+      const id = window.setTimeout(() => {
+        setDubActiveLine(i)
+        const utter = new SpeechSynthesisUtterance(text)
+        utter.lang = LANG_LOCALE[dubLang]
+        const voices = window.speechSynthesis.getVoices()
+        const voice = voices.find(v => v.lang.toLowerCase().startsWith(dubLang))
+        if (voice) utter.voice = voice
+        window.speechSynthesis.speak(utter)
+      }, line.start * 1000)
+      dubTimeoutsRef.current.push(id)
+    })
+
+    const endId = window.setTimeout(() => {
+      setDubPlaying(false)
+      setDubActiveLine(-1)
+    }, SAMPLE_SCRIPT[SAMPLE_SCRIPT.length - 1].end * 1000 + 500)
+    dubTimeoutsRef.current.push(endId)
+  }
+
   return (
     <div className="space-y-6">
       {/* Hero */}
@@ -197,10 +370,12 @@ export default function VideoPlayerTab() {
       </div>
 
       {/* Mode Toggle */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {[
           { id: 'player' as const, label: 'Demo Player' },
           { id: 'stream-test' as const, label: 'Stream Tester' },
+          { id: 'captions' as const, label: 'AI Captions' },
+          { id: 'dubbing' as const, label: 'AI Dubbing' },
           { id: 'features' as const, label: 'Capabilities' },
         ].map(m => (
           <button
@@ -405,6 +580,205 @@ export default function VideoPlayerTab() {
             </div>
           ) : (
             <div ref={playerRef} className="rounded-lg overflow-hidden bg-black aspect-video max-w-4xl mx-auto" />
+          )}
+        </>
+      )}
+
+      {mode === 'captions' && (
+        <>
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 className="font-semibold text-gray-800 mb-1">AI Caption Generation</h3>
+            <p className="text-xs text-gray-500 mb-4">
+              Pick a video, then generate captions with a simulated speech-to-text pipeline. The resulting WebVTT track loads directly into AMP v2.
+            </p>
+
+            <label className="text-xs font-semibold text-gray-700 block mb-1.5">Video</label>
+            <select
+              value={captionSource}
+              onChange={e => setCaptionSource(e.target.value as SourceKey)}
+              disabled={captionsGenerating}
+              className="w-full border border-gray-300 rounded px-3 py-2.5 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-akamai-blue/30 focus:border-akamai-blue disabled:opacity-50"
+            >
+              {(Object.keys(DEMO_SOURCES) as SourceKey[]).map(name => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+
+            <button
+              onClick={generateCaptions}
+              disabled={captionsGenerating}
+              className="w-full bg-akamai-blue text-white px-5 py-3 rounded-lg text-sm font-semibold hover:bg-akamai-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {captionsGenerating ? 'Generating…' : captionsReady ? 'Regenerate Captions' : 'Generate Captions'}
+            </button>
+
+            {(captionsGenerating || captionsReady) && (
+              <div className="mt-5 space-y-2">
+                {CAPTION_STEPS.map((step, i) => {
+                  const done = i < captionStep
+                  const active = i === captionStep && captionsGenerating
+                  return (
+                    <div key={step} className="flex items-center gap-2.5 text-sm">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0 ${
+                        done ? 'bg-green-500 text-white' : active ? 'bg-akamai-blue text-white animate-pulse' : 'bg-gray-200 text-gray-400'
+                      }`}>
+                        {done ? '✓' : i + 1}
+                      </div>
+                      <span className={done || active ? 'text-gray-800' : 'text-gray-400'}>{step}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {captionsReady && (
+            <div className="flex flex-col lg:flex-row gap-6">
+              <div className="flex-[2]">
+                {!bitmovinKey || playerError === 'LICENSE' ? (
+                  <div className="bg-gray-900 rounded-lg aspect-video flex items-center justify-center text-center px-8">
+                    <p className="text-white/60 text-xs">Set <code className="bg-white/10 px-1.5 py-0.5 rounded text-white/70">VITE_BITMOVIN_KEY</code> to preview captions on the live player.</p>
+                  </div>
+                ) : (
+                  <div ref={playerRef} className="rounded-lg overflow-hidden bg-black aspect-video" />
+                )}
+              </div>
+              <div className="flex-1 bg-white rounded-lg border border-gray-200 p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-gray-800">Generated Transcript</h3>
+                  <button onClick={downloadVtt} className="text-xs text-akamai-blue font-semibold hover:underline">Download .vtt</button>
+                </div>
+                <div className="space-y-1.5 max-h-[320px] overflow-y-auto">
+                  {SAMPLE_SCRIPT.map((line, i) => (
+                    <div
+                      key={i}
+                      className={`px-3 py-2 rounded text-xs transition-colors ${
+                        activeCaptionLine === i ? 'bg-akamai-blue text-white font-medium' : 'bg-gray-50 text-gray-700'
+                      }`}
+                    >
+                      <span className="opacity-60 mr-2">{formatVttTime(line.start).slice(3, 8)}</span>{line.en}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-gray-400 mt-3 border-t border-gray-100 pt-3">
+                  Demo uses a representative sample transcript to demonstrate the pipeline end-to-end. In production, this step calls a speech-to-text service (e.g. AWS Transcribe, Google Speech-to-Text) against the video's real audio track.
+                </p>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {mode === 'dubbing' && (
+        <>
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 className="font-semibold text-gray-800 mb-1">AI Dubbing</h3>
+            <p className="text-xs text-gray-500 mb-4">
+              Select a preset video and target language. The pipeline transcribes, translates, and synthesizes a dubbed voice track using your browser's text-to-speech engine — no external API key required.
+            </p>
+
+            <label className="text-xs font-semibold text-gray-700 block mb-1.5">Video</label>
+            <select
+              value={dubSource}
+              onChange={e => setDubSource(e.target.value as SourceKey)}
+              disabled={dubGenerating}
+              className="w-full border border-gray-300 rounded px-3 py-2.5 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-akamai-blue/30 focus:border-akamai-blue disabled:opacity-50"
+            >
+              {(Object.keys(DEMO_SOURCES) as SourceKey[]).map(name => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+
+            <label className="text-xs font-semibold text-gray-700 block mb-1.5">Dub Language (from English)</label>
+            <div className="flex gap-2 mb-4">
+              {(['es', 'hi'] as const).map(lang => (
+                <button
+                  key={lang}
+                  onClick={() => setDubLang(lang)}
+                  disabled={dubGenerating}
+                  className={`px-4 py-2 rounded text-xs font-semibold transition-colors disabled:opacity-50 ${
+                    dubLang === lang ? 'bg-akamai-blue text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  English → {LANG_LABELS[lang]}
+                </button>
+              ))}
+            </div>
+
+            {voiceAvailable === false && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-xs text-amber-800">
+                No {LANG_LABELS[dubLang]} text-to-speech voice was found in this browser. Translated captions will still display, but audio synthesis will be silent. Try Chrome or Edge on Windows/Android, or install additional language voice packs.
+              </div>
+            )}
+
+            <button
+              onClick={generateDub}
+              disabled={dubGenerating}
+              className="w-full bg-akamai-blue text-white px-5 py-3 rounded-lg text-sm font-semibold hover:bg-akamai-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {dubGenerating ? 'Generating…' : dubReady ? 'Regenerate Dub' : 'Generate Dub'}
+            </button>
+
+            {(dubGenerating || dubReady) && (
+              <div className="mt-5 space-y-2">
+                {DUB_STEPS.map((step, i) => {
+                  const done = i < dubStep
+                  const active = i === dubStep && dubGenerating
+                  return (
+                    <div key={step} className="flex items-center gap-2.5 text-sm">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0 ${
+                        done ? 'bg-green-500 text-white' : active ? 'bg-akamai-blue text-white animate-pulse' : 'bg-gray-200 text-gray-400'
+                      }`}>
+                        {done ? '✓' : i + 1}
+                      </div>
+                      <span className={done || active ? 'text-gray-800' : 'text-gray-400'}>{step}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {dubReady && (
+            <div className="flex flex-col lg:flex-row gap-6">
+              <div className="flex-[2]">
+                {!bitmovinKey || playerError === 'LICENSE' ? (
+                  <div className="bg-gray-900 rounded-lg aspect-video flex items-center justify-center text-center px-8">
+                    <p className="text-white/60 text-xs">Set <code className="bg-white/10 px-1.5 py-0.5 rounded text-white/70">VITE_BITMOVIN_KEY</code> to preview the dubbed playback on the live player.</p>
+                  </div>
+                ) : (
+                  <div ref={playerRef} className="rounded-lg overflow-hidden bg-black aspect-video mb-3" />
+                )}
+                <button
+                  onClick={playDubbedPreview}
+                  disabled={dubPlaying}
+                  className="w-full bg-emerald-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                >
+                  {dubPlaying ? 'Playing Dubbed Preview…' : `Play Dubbed Preview (${LANG_LABELS[dubLang]})`}
+                </button>
+              </div>
+              <div className="flex-1 bg-white rounded-lg border border-gray-200 p-5">
+                <h3 className="font-semibold text-gray-800 mb-3">Original ↔ Translated</h3>
+                <div className="space-y-3 max-h-[320px] overflow-y-auto">
+                  {SAMPLE_SCRIPT.map((line, i) => (
+                    <div
+                      key={i}
+                      className={`px-3 py-2 rounded text-xs transition-colors ${
+                        dubActiveLine === i ? 'bg-emerald-50 border border-emerald-300' : 'bg-gray-50 border border-transparent'
+                      }`}
+                    >
+                      <div className="text-gray-500">{line.en}</div>
+                      <div className={`mt-1 font-medium ${dubActiveLine === i ? 'text-emerald-700' : 'text-gray-800'}`}>
+                        {dubLang === 'es' ? line.es : line.hi}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-gray-400 mt-3 border-t border-gray-100 pt-3">
+                  Translation and voice synthesis run live in your browser via the Web Speech API. In production, translation would use a service like Amazon Translate or Google Cloud Translation, and voice synthesis would use a studio-quality TTS engine (e.g. Amazon Polly, ElevenLabs) muxed back into the audio track.
+                </p>
+              </div>
+            </div>
           )}
         </>
       )}
