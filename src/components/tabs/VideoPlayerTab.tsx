@@ -5,26 +5,17 @@ type DemoMode = 'player' | 'stream-test' | 'captions' | 'dubbing' | 'features'
 type DubLang = 'es' | 'hi'
 
 const DEMO_SOURCES = {
-  'Art of Motion (DASH)': {
-    dash: 'https://cdn.bitmovin.com/content/assets/art-of-motion-dash-hls-progressive/mpds/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.mpd',
-    poster: 'https://cdn.bitmovin.com/content/assets/art-of-motion-dash-hls-progressive/poster.jpg',
+  'Sintel (DASH)': {
+    dash: 'https://storage.googleapis.com/shaka-demo-assets/sintel-mp4-only/dash.mpd',
   },
-  'Art of Motion (HLS)': {
-    hls: 'https://cdn.bitmovin.com/content/assets/art-of-motion-dash-hls-progressive/m3u8s/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.m3u8',
-    poster: 'https://cdn.bitmovin.com/content/assets/art-of-motion-dash-hls-progressive/poster.jpg',
+  'Apple BipBop (HLS)': {
+    hls: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8',
   },
-  'Art of Motion (Progressive)': {
-    progressive: 'https://cdn.bitmovin.com/content/assets/art-of-motion-dash-hls-progressive/MI201109210084_mpeg-4_hd_high_1080p25_10mbits.mp4',
-    poster: 'https://cdn.bitmovin.com/content/assets/art-of-motion-dash-hls-progressive/poster.jpg',
-  },
-  'Art of Motion + Thumbnails': {
-    dash: 'https://cdn.bitmovin.com/content/assets/art-of-motion-dash-hls-progressive/mpds/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.mpd',
-    poster: 'https://cdn.bitmovin.com/content/assets/art-of-motion-dash-hls-progressive/poster.jpg',
-    thumbnailTrack: { url: 'https://cdn.bitmovin.com/content/assets/art-of-motion-dash-hls-progressive/thumbnails/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.vtt' },
+  'Flower (Progressive)': {
+    progressive: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
   },
   'DASH + Widevine DRM': {
-    dash: 'https://cdn.bitmovin.com/content/assets/art-of-motion_drm/mpds/11331.mpd',
-    poster: 'https://cdn.bitmovin.com/content/assets/art-of-motion-dash-hls-progressive/poster.jpg',
+    dash: 'https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine/dash.mpd',
     drm: { widevine: { LA_URL: 'https://cwip-shaka-proxy.appspot.com/no_auth' } },
   },
   'Akamai Live (HLS)': {
@@ -83,7 +74,7 @@ function buildVtt(): string {
 
 export default function VideoPlayerTab() {
   const [mode, setMode] = useState<DemoMode>('player')
-  const [selectedSource, setSelectedSource] = useState<SourceKey>('Art of Motion (DASH)')
+  const [selectedSource, setSelectedSource] = useState<SourceKey>('Sintel (DASH)')
   const [customUrl, setCustomUrl] = useState('')
   const [customFormat, setCustomFormat] = useState<StreamFormat>('hls')
   const [subtitleUrl, setSubtitleUrl] = useState('')
