@@ -41,7 +41,10 @@ const ANALYTICS_CDN = 'https://cdn.bitmovin.com/analytics/web/2/bitmovinanalytic
 // Original sample narration used to demonstrate the AI captions/dubbing pipeline.
 // Not a transcript of any of the demo videos' actual audio — this is a
 // representative script so the workflow can be shown end-to-end without a
-// backend ASR/translation service wired up.
+// backend ASR/translation service wired up. The English text is what the
+// simulated ASR step "transcribes" into the generated WebVTT file; the
+// es/hi fields are what the simulated translation step produces from that
+// same VTT's cues.
 const SAMPLE_SCRIPT: { start: number; end: number; en: string; es: string; hi: string }[] = [
   { start: 0, end: 4, en: 'Welcome to the Akamai media delivery showcase.', es: 'Bienvenido a la demostración de entrega de medios de Akamai.', hi: 'अकामाई मीडिया डिलीवरी शोकेस में आपका स्वागत है।' },
   { start: 4, end: 8, en: 'This video demonstrates adaptive streaming in action.', es: 'Este video demuestra la transmisión adaptativa en acción.', hi: 'यह वीडियो एडेप्टिव स्ट्रीमिंग को क्रियान्वित होते हुए दिखाता है।' },
@@ -50,11 +53,13 @@ const SAMPLE_SCRIPT: { start: number; end: number; en: string; es: string; hi: s
   { start: 16, end: 20, en: "Thank you for exploring Akamai's media solutions.", es: 'Gracias por explorar las soluciones de medios de Akamai.', hi: 'अकामाई के मीडिया समाधानों को देखने के लिए धन्यवाद।' },
 ]
 
-const CAPTION_STEPS = ['Extracting audio track', 'Running speech-to-text (ASR)', 'Detecting language', 'Aligning timestamps', 'Rendering WebVTT']
-const DUB_STEPS = ['Transcribing source audio (English)', 'Translating to target language', 'Synthesizing voice (TTS)', 'Muxing dubbed audio track']
+const TRANSCRIBE_STEPS = ['Extracting audio track', 'Running speech-to-text (ASR)', 'Detecting language', 'Aligning timestamps', 'Rendering WebVTT']
+const TRANSLATE_STEPS = ['Translating VTT cues to target language', 'Synthesizing voice (TTS)', 'Muxing dubbed audio track']
 
 const LANG_LABELS: Record<DubLang, string> = { es: 'Spanish', hi: 'Hindi' }
 const LANG_LOCALE: Record<DubLang, string> = { es: 'es-ES', hi: 'hi-IN' }
+
+type VttCue = { start: number; end: number; text: string }
 
 function formatVttTime(sec: number): string {
   const h = Math.floor(sec / 3600).toString().padStart(2, '0')
@@ -64,12 +69,44 @@ function formatVttTime(sec: number): string {
   return `${h}:${m}:${s}.${ms}`
 }
 
-function buildVtt(): string {
+// Builds a real WebVTT file from the (simulated) transcription/translation
+// output. lang='en' is the ASR output; 'es'/'hi' are translated tracks.
+function buildVtt(lang: 'en' | DubLang = 'en'): string {
   let vtt = 'WEBVTT\n\n'
   SAMPLE_SCRIPT.forEach((line, i) => {
-    vtt += `${i + 1}\n${formatVttTime(line.start)} --> ${formatVttTime(line.end)}\n${line.en}\n\n`
+    const text = lang === 'en' ? line.en : lang === 'es' ? line.es : line.hi
+    vtt += `${i + 1}\n${formatVttTime(line.start)} --> ${formatVttTime(line.end)}\n${text}\n\n`
   })
   return vtt
+}
+
+// Parses WebVTT text back into cues — used so the transcript/dubbing UI is
+// driven by the actual generated .vtt file content, not the in-memory
+// script object directly.
+function parseVtt(vtt: string): VttCue[] {
+  const lines = vtt.split(/\r?\n/)
+  const timeRe = /(\d{2}):(\d{2}):(\d{2})\.(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})\.(\d{3})/
+  const toSec = (h: string, m: string, s: string, ms: string) => (+h) * 3600 + (+m) * 60 + (+s) + (+ms) / 1000
+  const cues: VttCue[] = []
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(timeRe)
+    if (!m) continue
+    const start = toSec(m[1], m[2], m[3], m[4])
+    const end = toSec(m[5], m[6], m[7], m[8])
+    const textLines: string[] = []
+    let j = i + 1
+    while (j < lines.length && lines[j].trim() !== '') { textLines.push(lines[j]); j++ }
+    cues.push({ start, end, text: textLines.join(' ') })
+    i = j
+  }
+  return cues
+}
+
+type PlayerHandle = {
+  play?: () => void
+  seek?: (t: number) => void
+  getCurrentTime?: () => number
+  subtitles?: { add: (t: Record<string, unknown>) => void; enable: (id: string) => void }
 }
 
 export default function VideoPlayerTab() {
@@ -88,16 +125,25 @@ export default function VideoPlayerTab() {
   const playerInstanceRef = useRef<unknown>(null)
   const bitmovinKey = import.meta.env.VITE_BITMOVIN_KEY
 
-  // AI Captions state
+  // AI Captions state — generates a real .vtt file and attaches it to the
+  // already-playing video.
   const [captionSource, setCaptionSource] = useState<SourceKey>('Tears of Steel (HLS)')
   const [captionStep, setCaptionStep] = useState(0)
   const [captionsGenerating, setCaptionsGenerating] = useState(false)
   const [captionsReady, setCaptionsReady] = useState(false)
   const [activeCaptionLine, setActiveCaptionLine] = useState(-1)
+  const [captionCues, setCaptionCues] = useState<VttCue[]>([])
   const captionVttUrlRef = useRef<string | null>(null)
 
-  // AI Dubbing state
+  // AI Dubbing state — Stage 1 (transcribe to VTT) mirrors Captions above;
+  // Stage 2 (translate + synthesize) consumes that VTT's cues.
   const [dubSource, setDubSource] = useState<SourceKey>('Tears of Steel (HLS)')
+  const [dubTranscriptStep, setDubTranscriptStep] = useState(0)
+  const [dubTranscribing, setDubTranscribing] = useState(false)
+  const [dubTranscriptReady, setDubTranscriptReady] = useState(false)
+  const [dubCues, setDubCues] = useState<VttCue[]>([])
+  const dubVttUrlRef = useRef<string | null>(null)
+
   const [dubLang, setDubLang] = useState<DubLang>('es')
   const [dubStep, setDubStep] = useState(0)
   const [dubGenerating, setDubGenerating] = useState(false)
@@ -106,6 +152,10 @@ export default function VideoPlayerTab() {
   const [dubActiveLine, setDubActiveLine] = useState(-1)
   const [voiceAvailable, setVoiceAvailable] = useState<boolean | null>(null)
   const dubTimeoutsRef = useRef<number[]>([])
+
+  // Reuse the VTT already generated in the Captions tab when the Dubbing
+  // tab has the same source selected — no need to transcribe twice.
+  const reuseCaptionVtt = dubSource === captionSource && captionsReady
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -130,22 +180,35 @@ export default function VideoPlayerTab() {
       clearDubTimeouts()
       if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel()
       if (captionVttUrlRef.current) URL.revokeObjectURL(captionVttUrlRef.current)
+      if (dubVttUrlRef.current) URL.revokeObjectURL(dubVttUrlRef.current)
     }
   }, [])
 
+  // Load the raw video as soon as a mode/source is selected — playback
+  // works immediately, independent of whether captions/dubbing have been
+  // generated yet.
   useEffect(() => {
     if (!playerLoaded || !bitmovinKey) return
     const timer = setTimeout(() => {
+      if (!playerRef.current) return
       if (mode === 'player' || mode === 'stream-test') {
-        if (!playerRef.current) return
         loadSource(DEMO_SOURCES[selectedSource])
+      } else if (mode === 'captions') {
+        setCaptionsReady(false)
+        setCaptionCues([])
+        loadSource(DEMO_SOURCES[captionSource])
+      } else if (mode === 'dubbing') {
+        setDubTranscriptReady(false)
+        setDubCues([])
+        setDubReady(false)
+        loadSource(DEMO_SOURCES[dubSource])
       } else {
         destroyPlayer()
       }
     }, 100)
     return () => clearTimeout(timer)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playerLoaded, selectedSource, mode])
+  }, [playerLoaded, selectedSource, captionSource, dubSource, mode])
 
   // Check available speech-synthesis voices for the selected dub language
   useEffect(() => {
@@ -162,13 +225,13 @@ export default function VideoPlayerTab() {
   useEffect(() => {
     if (mode !== 'captions' || !captionsReady) return
     const id = setInterval(() => {
-      const inst = playerInstanceRef.current as { getCurrentTime?: () => number } | null
+      const inst = playerInstanceRef.current as PlayerHandle | null
       if (!inst?.getCurrentTime) return
       const t = inst.getCurrentTime()
-      setActiveCaptionLine(SAMPLE_SCRIPT.findIndex(l => t >= l.start && t < l.end))
+      setActiveCaptionLine(captionCues.findIndex(l => t >= l.start && t < l.end))
     }, 300)
     return () => clearInterval(id)
-  }, [mode, captionsReady])
+  }, [mode, captionsReady, captionCues])
 
   function destroyPlayer() {
     const inst = playerInstanceRef.current as { destroy?: () => void } | null
@@ -263,6 +326,22 @@ export default function VideoPlayerTab() {
     loadSource(source)
   }
 
+  // Attaches a subtitle track to the already-playing player without
+  // reloading the source. Falls back to a full reload if the running
+  // player build doesn't expose player.subtitles.add.
+  function attachSubtitleTrack(source: Record<string, unknown>, url: string, id: string, label: string): boolean {
+    const inst = playerInstanceRef.current as PlayerHandle | null
+    if (inst?.subtitles?.add) {
+      try {
+        inst.subtitles.add({ id, url, label, lang: 'en', kind: 'subtitle' })
+        inst.subtitles.enable(id)
+        return true
+      } catch { /* fall through to reload */ }
+    }
+    loadSource({ ...source, subtitle: { tracks: [{ id, url, label, lang: 'en', kind: 'subtitle' }] } })
+    return false
+  }
+
   function generateCaptions() {
     setCaptionsGenerating(true)
     setCaptionsReady(false)
@@ -272,18 +351,17 @@ export default function VideoPlayerTab() {
     const interval = setInterval(() => {
       step++
       setCaptionStep(step)
-      if (step >= CAPTION_STEPS.length) {
+      if (step >= TRANSCRIBE_STEPS.length) {
         clearInterval(interval)
         if (captionVttUrlRef.current) URL.revokeObjectURL(captionVttUrlRef.current)
-        const blob = new Blob([buildVtt()], { type: 'text/vtt' })
+        const vttText = buildVtt('en')
+        const blob = new Blob([vttText], { type: 'text/vtt' })
         const url = URL.createObjectURL(blob)
         captionVttUrlRef.current = url
+        setCaptionCues(parseVtt(vttText))
         setCaptionsGenerating(false)
         setCaptionsReady(true)
-        loadSource({
-          ...DEMO_SOURCES[captionSource],
-          subtitle: { tracks: [{ id: 'ai-cc', url, label: 'English (AI Generated)', lang: 'en', kind: 'subtitle' }] },
-        })
+        attachSubtitleTrack(DEMO_SOURCES[captionSource], url, 'ai-cc', 'English (AI Generated)')
       }
     }, 650)
   }
@@ -296,6 +374,55 @@ export default function VideoPlayerTab() {
     a.click()
   }
 
+  // Dubbing Stage 1: transcribe the selected video to a real VTT file
+  // (identical pipeline to Captions, kept separate so each tab can be
+  // demoed standalone with a different source video).
+  function generateDubTranscript() {
+    setDubTranscribing(true)
+    setDubTranscriptReady(false)
+    setDubStep(0)
+    setDubReady(false)
+    let step = 0
+    const interval = setInterval(() => {
+      step++
+      setDubTranscriptStep(step)
+      if (step >= TRANSCRIBE_STEPS.length) {
+        clearInterval(interval)
+        if (dubVttUrlRef.current) URL.revokeObjectURL(dubVttUrlRef.current)
+        const vttText = buildVtt('en')
+        const blob = new Blob([vttText], { type: 'text/vtt' })
+        const url = URL.createObjectURL(blob)
+        dubVttUrlRef.current = url
+        setDubCues(parseVtt(vttText))
+        setDubTranscribing(false)
+        setDubTranscriptReady(true)
+        attachSubtitleTrack(DEMO_SOURCES[dubSource], url, 'ai-dub-src', 'English (AI Generated)')
+      }
+    }, 650)
+  }
+
+  function downloadDubSourceVtt() {
+    const url = reuseCaptionVtt ? captionVttUrlRef.current : dubVttUrlRef.current
+    if (!url) return
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'ai-generated-captions.vtt'
+    a.click()
+  }
+
+  function downloadTranslatedVtt() {
+    const vttText = buildVtt(dubLang)
+    const blob = new Blob([vttText], { type: 'text/vtt' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `dubbed-captions-${dubLang}.vtt`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+
+  // Dubbing Stage 2: translate the VTT cues from Stage 1 (or the reused
+  // Captions VTT) and synthesize a voice track from that translated text.
   function generateDub() {
     clearDubTimeouts()
     if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel()
@@ -308,28 +435,30 @@ export default function VideoPlayerTab() {
     const interval = setInterval(() => {
       step++
       setDubStep(step)
-      if (step >= DUB_STEPS.length) {
+      if (step >= TRANSLATE_STEPS.length) {
         clearInterval(interval)
         setDubGenerating(false)
         setDubReady(true)
-        loadSource(DEMO_SOURCES[dubSource])
       }
     }, 650)
   }
 
   function playDubbedPreview() {
     if (typeof window === 'undefined' || !window.speechSynthesis) return
+    const cues = reuseCaptionVtt ? captionCues : dubCues
+    if (cues.length === 0) return
     clearDubTimeouts()
     window.speechSynthesis.cancel()
     setDubPlaying(true)
     setDubActiveLine(-1)
 
-    const inst = playerInstanceRef.current as { play?: () => void; seek?: (t: number) => void } | null
+    const inst = playerInstanceRef.current as PlayerHandle | null
     inst?.seek?.(0)
     inst?.play?.()
 
-    SAMPLE_SCRIPT.forEach((line, i) => {
-      const text = dubLang === 'es' ? line.es : line.hi
+    cues.forEach((cue, i) => {
+      const text = dubLang === 'es' ? SAMPLE_SCRIPT[i]?.es : SAMPLE_SCRIPT[i]?.hi
+      if (!text) return
       const id = window.setTimeout(() => {
         setDubActiveLine(i)
         const utter = new SpeechSynthesisUtterance(text)
@@ -338,16 +467,20 @@ export default function VideoPlayerTab() {
         const voice = voices.find(v => v.lang.toLowerCase().startsWith(dubLang))
         if (voice) utter.voice = voice
         window.speechSynthesis.speak(utter)
-      }, line.start * 1000)
+      }, cue.start * 1000)
       dubTimeoutsRef.current.push(id)
     })
 
     const endId = window.setTimeout(() => {
       setDubPlaying(false)
       setDubActiveLine(-1)
-    }, SAMPLE_SCRIPT[SAMPLE_SCRIPT.length - 1].end * 1000 + 500)
+    }, cues[cues.length - 1].end * 1000 + 500)
     dubTimeoutsRef.current.push(endId)
   }
+
+  const activeDubCues = reuseCaptionVtt ? captionCues : dubCues
+  const dubTranscriptDone = reuseCaptionVtt || dubTranscriptReady
+  const dubTranscriptRunning = !reuseCaptionVtt && dubTranscribing
 
   return (
     <div className="space-y-6">
@@ -577,200 +710,261 @@ export default function VideoPlayerTab() {
 
       {mode === 'captions' && (
         <>
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-800 mb-1">AI Caption Generation</h3>
-            <p className="text-xs text-gray-500 mb-4">
-              Pick a video, then generate captions with a simulated speech-to-text pipeline. The resulting WebVTT track loads directly into AMP v2.
-            </p>
-
-            <label className="text-xs font-semibold text-gray-700 block mb-1.5">Video</label>
-            <select
-              value={captionSource}
-              onChange={e => setCaptionSource(e.target.value as SourceKey)}
-              disabled={captionsGenerating}
-              className="w-full border border-gray-300 rounded px-3 py-2.5 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-akamai-blue/30 focus:border-akamai-blue disabled:opacity-50"
-            >
-              {(Object.keys(DEMO_SOURCES) as SourceKey[]).map(name => (
-                <option key={name} value={name}>{name}</option>
-              ))}
-            </select>
-
-            <button
-              onClick={generateCaptions}
-              disabled={captionsGenerating}
-              className="w-full bg-akamai-blue text-white px-5 py-3 rounded-lg text-sm font-semibold hover:bg-akamai-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {captionsGenerating ? 'Generating…' : captionsReady ? 'Regenerate Captions' : 'Generate Captions'}
-            </button>
-
-            {(captionsGenerating || captionsReady) && (
-              <div className="mt-5 space-y-2">
-                {CAPTION_STEPS.map((step, i) => {
-                  const done = i < captionStep
-                  const active = i === captionStep && captionsGenerating
-                  return (
-                    <div key={step} className="flex items-center gap-2.5 text-sm">
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0 ${
-                        done ? 'bg-green-500 text-white' : active ? 'bg-akamai-blue text-white animate-pulse' : 'bg-gray-200 text-gray-400'
-                      }`}>
-                        {done ? '✓' : i + 1}
-                      </div>
-                      <span className={done || active ? 'text-gray-800' : 'text-gray-400'}>{step}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          {captionsReady && (
-            <div className="flex flex-col lg:flex-row gap-6">
-              <div className="flex-[2]">
-                {!bitmovinKey || playerError === 'LICENSE' ? (
-                  <div className="bg-gray-900 rounded-lg aspect-video flex items-center justify-center text-center px-8">
-                    <p className="text-white/60 text-xs">Set <code className="bg-white/10 px-1.5 py-0.5 rounded text-white/70">VITE_BITMOVIN_KEY</code> to preview captions on the live player.</p>
-                  </div>
-                ) : (
-                  <div ref={playerRef} className="rounded-lg overflow-hidden bg-black aspect-video" />
-                )}
-              </div>
-              <div className="flex-1 bg-white rounded-lg border border-gray-200 p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-gray-800">Generated Transcript</h3>
-                  <button onClick={downloadVtt} className="text-xs text-akamai-blue font-semibold hover:underline">Download .vtt</button>
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Player — plays immediately, independent of caption generation */}
+            <div className="flex-[2]">
+              {!bitmovinKey || playerError === 'LICENSE' ? (
+                <div className="bg-gray-900 rounded-lg aspect-video flex items-center justify-center text-center px-8">
+                  <p className="text-white/60 text-xs">Set <code className="bg-white/10 px-1.5 py-0.5 rounded text-white/70">VITE_BITMOVIN_KEY</code> to activate playback.</p>
                 </div>
-                <div className="space-y-1.5 max-h-[320px] overflow-y-auto">
-                  {SAMPLE_SCRIPT.map((line, i) => (
-                    <div
-                      key={i}
-                      className={`px-3 py-2 rounded text-xs transition-colors ${
-                        activeCaptionLine === i ? 'bg-akamai-blue text-white font-medium' : 'bg-gray-50 text-gray-700'
-                      }`}
-                    >
-                      <span className="opacity-60 mr-2">{formatVttTime(line.start).slice(3, 8)}</span>{line.en}
-                    </div>
-                  ))}
-                </div>
-                <p className="text-[10px] text-gray-400 mt-3 border-t border-gray-100 pt-3">
-                  Demo uses a representative sample transcript to demonstrate the pipeline end-to-end. In production, this step calls a speech-to-text service (e.g. AWS Transcribe, Google Speech-to-Text) against the video's real audio track.
-                </p>
-              </div>
+              ) : (
+                <div ref={playerRef} className="rounded-lg overflow-hidden bg-black aspect-video" />
+              )}
+              <select
+                value={captionSource}
+                onChange={e => setCaptionSource(e.target.value as SourceKey)}
+                disabled={captionsGenerating}
+                className="w-full border border-gray-300 rounded px-3 py-2.5 text-sm mt-3 focus:outline-none focus:ring-2 focus:ring-akamai-blue/30 focus:border-akamai-blue disabled:opacity-50"
+              >
+                {(Object.keys(DEMO_SOURCES) as SourceKey[]).map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
             </div>
-          )}
+
+            <div className="flex-1 bg-white rounded-lg border border-gray-200 p-5">
+              <h3 className="font-semibold text-gray-800 mb-1">AI Caption Generation</h3>
+              <p className="text-xs text-gray-500 mb-4">
+                Play the video above, then generate a real WebVTT file via a simulated speech-to-text pipeline. The file attaches to the player as a live subtitle track.
+              </p>
+
+              <button
+                onClick={generateCaptions}
+                disabled={captionsGenerating}
+                className="w-full bg-akamai-blue text-white px-5 py-3 rounded-lg text-sm font-semibold hover:bg-akamai-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {captionsGenerating ? 'Generating…' : captionsReady ? 'Regenerate Captions' : 'Generate Captions (VTT)'}
+              </button>
+
+              {(captionsGenerating || captionsReady) && (
+                <div className="mt-4 space-y-2">
+                  {TRANSCRIBE_STEPS.map((step, i) => {
+                    const done = i < captionStep
+                    const active = i === captionStep && captionsGenerating
+                    return (
+                      <div key={step} className="flex items-center gap-2.5 text-sm">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0 ${
+                          done ? 'bg-green-500 text-white' : active ? 'bg-akamai-blue text-white animate-pulse' : 'bg-gray-200 text-gray-400'
+                        }`}>
+                          {done ? '✓' : i + 1}
+                        </div>
+                        <span className={done || active ? 'text-gray-800' : 'text-gray-400'}>{step}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {captionsReady && (
+                <>
+                  <div className="flex items-center justify-between mt-5 mb-2 border-t border-gray-100 pt-4">
+                    <h4 className="font-semibold text-gray-800 text-sm">Generated Transcript</h4>
+                    <button onClick={downloadVtt} className="text-xs text-akamai-blue font-semibold hover:underline">Download .vtt</button>
+                  </div>
+                  <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
+                    {captionCues.map((line, i) => (
+                      <div
+                        key={i}
+                        className={`px-3 py-2 rounded text-xs transition-colors ${
+                          activeCaptionLine === i ? 'bg-akamai-blue text-white font-medium' : 'bg-gray-50 text-gray-700'
+                        }`}
+                      >
+                        <span className="opacity-60 mr-2">{formatVttTime(line.start).slice(3, 8)}</span>{line.text}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-3 border-t border-gray-100 pt-3">
+                    Demo uses a representative sample transcript to demonstrate the pipeline end-to-end. In production, this step calls a speech-to-text service (e.g. AWS Transcribe, Google Speech-to-Text) against the video's real audio track.
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
         </>
       )}
 
       {mode === 'dubbing' && (
         <>
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-800 mb-1">AI Dubbing</h3>
-            <p className="text-xs text-gray-500 mb-4">
-              Select a preset video and target language. The pipeline transcribes, translates, and synthesizes a dubbed voice track using your browser's text-to-speech engine — no external API key required.
-            </p>
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Player — plays immediately, independent of dub generation */}
+            <div className="flex-[2]">
+              {!bitmovinKey || playerError === 'LICENSE' ? (
+                <div className="bg-gray-900 rounded-lg aspect-video flex items-center justify-center text-center px-8">
+                  <p className="text-white/60 text-xs">Set <code className="bg-white/10 px-1.5 py-0.5 rounded text-white/70">VITE_BITMOVIN_KEY</code> to activate playback.</p>
+                </div>
+              ) : (
+                <div ref={playerRef} className="rounded-lg overflow-hidden bg-black aspect-video" />
+              )}
+              <select
+                value={dubSource}
+                onChange={e => setDubSource(e.target.value as SourceKey)}
+                disabled={dubTranscribing || dubGenerating}
+                className="w-full border border-gray-300 rounded px-3 py-2.5 text-sm mt-3 focus:outline-none focus:ring-2 focus:ring-akamai-blue/30 focus:border-akamai-blue disabled:opacity-50"
+              >
+                {(Object.keys(DEMO_SOURCES) as SourceKey[]).map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
 
-            <label className="text-xs font-semibold text-gray-700 block mb-1.5">Video</label>
-            <select
-              value={dubSource}
-              onChange={e => setDubSource(e.target.value as SourceKey)}
-              disabled={dubGenerating}
-              className="w-full border border-gray-300 rounded px-3 py-2.5 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-akamai-blue/30 focus:border-akamai-blue disabled:opacity-50"
-            >
-              {(Object.keys(DEMO_SOURCES) as SourceKey[]).map(name => (
-                <option key={name} value={name}>{name}</option>
-              ))}
-            </select>
-
-            <label className="text-xs font-semibold text-gray-700 block mb-1.5">Dub Language (from English)</label>
-            <div className="flex gap-2 mb-4">
-              {(['es', 'hi'] as const).map(lang => (
-                <button
-                  key={lang}
-                  onClick={() => setDubLang(lang)}
-                  disabled={dubGenerating}
-                  className={`px-4 py-2 rounded text-xs font-semibold transition-colors disabled:opacity-50 ${
-                    dubLang === lang ? 'bg-akamai-blue text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  English → {LANG_LABELS[lang]}
-                </button>
-              ))}
-            </div>
-
-            {voiceAvailable === false && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-xs text-amber-800">
-                No {LANG_LABELS[dubLang]} text-to-speech voice was found in this browser. Translated captions will still display, but audio synthesis will be silent. Try Chrome or Edge on Windows/Android, or install additional language voice packs.
-              </div>
-            )}
-
-            <button
-              onClick={generateDub}
-              disabled={dubGenerating}
-              className="w-full bg-akamai-blue text-white px-5 py-3 rounded-lg text-sm font-semibold hover:bg-akamai-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {dubGenerating ? 'Generating…' : dubReady ? 'Regenerate Dub' : 'Generate Dub'}
-            </button>
-
-            {(dubGenerating || dubReady) && (
-              <div className="mt-5 space-y-2">
-                {DUB_STEPS.map((step, i) => {
-                  const done = i < dubStep
-                  const active = i === dubStep && dubGenerating
-                  return (
-                    <div key={step} className="flex items-center gap-2.5 text-sm">
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0 ${
-                        done ? 'bg-green-500 text-white' : active ? 'bg-akamai-blue text-white animate-pulse' : 'bg-gray-200 text-gray-400'
-                      }`}>
-                        {done ? '✓' : i + 1}
-                      </div>
-                      <span className={done || active ? 'text-gray-800' : 'text-gray-400'}>{step}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          {dubReady && (
-            <div className="flex flex-col lg:flex-row gap-6">
-              <div className="flex-[2]">
-                {!bitmovinKey || playerError === 'LICENSE' ? (
-                  <div className="bg-gray-900 rounded-lg aspect-video flex items-center justify-center text-center px-8">
-                    <p className="text-white/60 text-xs">Set <code className="bg-white/10 px-1.5 py-0.5 rounded text-white/70">VITE_BITMOVIN_KEY</code> to preview the dubbed playback on the live player.</p>
-                  </div>
-                ) : (
-                  <div ref={playerRef} className="rounded-lg overflow-hidden bg-black aspect-video mb-3" />
-                )}
+              {dubTranscriptDone && (
                 <button
                   onClick={playDubbedPreview}
-                  disabled={dubPlaying}
-                  className="w-full bg-emerald-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                  disabled={dubPlaying || !dubReady}
+                  className="w-full bg-emerald-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 mt-3"
                 >
                   {dubPlaying ? 'Playing Dubbed Preview…' : `Play Dubbed Preview (${LANG_LABELS[dubLang]})`}
                 </button>
-              </div>
-              <div className="flex-1 bg-white rounded-lg border border-gray-200 p-5">
-                <h3 className="font-semibold text-gray-800 mb-3">Original ↔ Translated</h3>
-                <div className="space-y-3 max-h-[320px] overflow-y-auto">
-                  {SAMPLE_SCRIPT.map((line, i) => (
-                    <div
-                      key={i}
-                      className={`px-3 py-2 rounded text-xs transition-colors ${
-                        dubActiveLine === i ? 'bg-emerald-50 border border-emerald-300' : 'bg-gray-50 border border-transparent'
-                      }`}
-                    >
-                      <div className="text-gray-500">{line.en}</div>
-                      <div className={`mt-1 font-medium ${dubActiveLine === i ? 'text-emerald-700' : 'text-gray-800'}`}>
-                        {dubLang === 'es' ? line.es : line.hi}
-                      </div>
-                    </div>
-                  ))}
+              )}
+            </div>
+
+            <div className="flex-1 space-y-4">
+              {/* Stage 1: Transcribe to VTT */}
+              <div className="bg-white rounded-lg border border-gray-200 p-5">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-5 h-5 rounded-full bg-akamai-blue text-white text-[10px] flex items-center justify-center font-bold shrink-0">1</div>
+                  <h3 className="font-semibold text-gray-800 text-sm">Generate Captions (VTT)</h3>
                 </div>
-                <p className="text-[10px] text-gray-400 mt-3 border-t border-gray-100 pt-3">
-                  Translation and voice synthesis run live in your browser via the Web Speech API. In production, translation would use a service like Amazon Translate or Google Cloud Translation, and voice synthesis would use a studio-quality TTS engine (e.g. Amazon Polly, ElevenLabs) muxed back into the audio track.
+                <p className="text-xs text-gray-500 mb-3 ml-7">Transcribes the video's audio into a real WebVTT file — the same pipeline as the AI Captions tab.</p>
+
+                {reuseCaptionVtt ? (
+                  <div className="ml-7 bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-800">
+                    ✓ Reusing the VTT already generated for "{captionSource}" in the AI Captions tab — no need to transcribe again.
+                  </div>
+                ) : (
+                  <div className="ml-7">
+                    <button
+                      onClick={generateDubTranscript}
+                      disabled={dubTranscribing}
+                      className="w-full bg-akamai-blue text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-akamai-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {dubTranscribing ? 'Transcribing…' : dubTranscriptReady ? 'Regenerate VTT' : 'Generate VTT'}
+                    </button>
+                    {(dubTranscriptRunning || dubTranscriptReady) && (
+                      <div className="mt-3 space-y-1.5">
+                        {TRANSCRIBE_STEPS.map((step, i) => {
+                          const done = i < dubTranscriptStep
+                          const active = i === dubTranscriptStep && dubTranscribing
+                          return (
+                            <div key={step} className="flex items-center gap-2 text-xs">
+                              <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] shrink-0 ${
+                                done ? 'bg-green-500 text-white' : active ? 'bg-akamai-blue text-white animate-pulse' : 'bg-gray-200 text-gray-400'
+                              }`}>
+                                {done ? '✓' : i + 1}
+                              </div>
+                              <span className={done || active ? 'text-gray-700' : 'text-gray-400'}>{step}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                    {dubTranscriptReady && (
+                      <button onClick={downloadDubSourceVtt} className="text-xs text-akamai-blue font-semibold hover:underline mt-2">Download source .vtt</button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Stage 2: Translate + Synthesize */}
+              <div className={`bg-white rounded-lg border border-gray-200 p-5 ${!dubTranscriptDone ? 'opacity-50' : ''}`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className={`w-5 h-5 rounded-full text-white text-[10px] flex items-center justify-center font-bold shrink-0 ${dubTranscriptDone ? 'bg-akamai-blue' : 'bg-gray-300'}`}>2</div>
+                  <h3 className="font-semibold text-gray-800 text-sm">Translate &amp; Dub from VTT</h3>
+                </div>
+                <p className="text-xs text-gray-500 mb-3 ml-7">
+                  {dubTranscriptDone
+                    ? 'Translates the VTT cues above and synthesizes a voice track using your browser\'s text-to-speech engine.'
+                    : 'Generate the VTT in Step 1 first.'}
                 </p>
+
+                <div className="ml-7">
+                  <div className="flex gap-2 mb-3">
+                    {(['es', 'hi'] as const).map(lang => (
+                      <button
+                        key={lang}
+                        onClick={() => setDubLang(lang)}
+                        disabled={dubGenerating || !dubTranscriptDone}
+                        className={`px-3 py-1.5 rounded text-xs font-semibold transition-colors disabled:opacity-50 ${
+                          dubLang === lang ? 'bg-akamai-blue text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        English → {LANG_LABELS[lang]}
+                      </button>
+                    ))}
+                  </div>
+
+                  {voiceAvailable === false && dubTranscriptDone && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 mb-3 text-[11px] text-amber-800">
+                      No {LANG_LABELS[dubLang]} text-to-speech voice found in this browser. Translated text will still display, but audio synthesis will be silent.
+                    </div>
+                  )}
+
+                  <button
+                    onClick={generateDub}
+                    disabled={!dubTranscriptDone || dubGenerating}
+                    className="w-full bg-akamai-blue text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-akamai-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {dubGenerating ? 'Generating…' : dubReady ? 'Regenerate Dub' : 'Translate & Generate Dub'}
+                  </button>
+
+                  {(dubGenerating || dubReady) && (
+                    <div className="mt-3 space-y-1.5">
+                      {TRANSLATE_STEPS.map((step, i) => {
+                        const done = i < dubStep
+                        const active = i === dubStep && dubGenerating
+                        return (
+                          <div key={step} className="flex items-center gap-2 text-xs">
+                            <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] shrink-0 ${
+                              done ? 'bg-green-500 text-white' : active ? 'bg-akamai-blue text-white animate-pulse' : 'bg-gray-200 text-gray-400'
+                            }`}>
+                              {done ? '✓' : i + 1}
+                            </div>
+                            <span className={done || active ? 'text-gray-700' : 'text-gray-400'}>{step}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  {dubReady && (
+                    <>
+                      <div className="flex items-center justify-between mt-4 mb-2">
+                        <h4 className="font-semibold text-gray-800 text-xs">Original ↔ Translated</h4>
+                        <button onClick={downloadTranslatedVtt} className="text-xs text-akamai-blue font-semibold hover:underline">Download translated .vtt</button>
+                      </div>
+                      <div className="space-y-2 max-h-[240px] overflow-y-auto">
+                        {activeDubCues.map((cue, i) => (
+                          <div
+                            key={i}
+                            className={`px-3 py-2 rounded text-xs transition-colors ${
+                              dubActiveLine === i ? 'bg-emerald-50 border border-emerald-300' : 'bg-gray-50 border border-transparent'
+                            }`}
+                          >
+                            <div className="text-gray-500">{cue.text}</div>
+                            <div className={`mt-1 font-medium ${dubActiveLine === i ? 'text-emerald-700' : 'text-gray-800'}`}>
+                              {dubLang === 'es' ? SAMPLE_SCRIPT[i]?.es : SAMPLE_SCRIPT[i]?.hi}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-3 border-t border-gray-100 pt-3">
+                        Translation and voice synthesis run live in your browser via the Web Speech API, driven by the VTT cues generated in Step 1. In production, translation would use a service like Amazon Translate or Google Cloud Translation, and voice synthesis would use a studio-quality TTS engine (e.g. Amazon Polly, ElevenLabs) muxed back into the audio track.
+                      </p>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-          )}
+          </div>
         </>
       )}
 
