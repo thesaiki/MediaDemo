@@ -11,7 +11,6 @@ const VirtualChannelsTab = lazy(() => import('./components/tabs/VirtualChannelsT
 const VPUTab = lazy(() => import('./components/tabs/VPUTab'))
 const AntiPiracyTab = lazy(() => import('./components/tabs/AntiPiracyTab'))
 const AnalyticsTab = lazy(() => import('./components/tabs/AnalyticsTab'))
-const CloudinaryTab = lazy(() => import('./components/tabs/CloudinaryTab'))
 
 const TABS = [
   { id: 'formats', label: 'Media 101' },
@@ -23,7 +22,6 @@ const TABS = [
   { id: 'vpu', label: 'VPU' },
   { id: 'antipiracy', label: 'MCAP' },
   { id: 'analytics', label: 'Analytics' },
-  { id: 'cloudinary', label: 'Cloudinary' },
 ] as const
 
 function getTabFromHash(): number {
@@ -58,7 +56,6 @@ export default function App() {
       case 6: return <Suspense fallback={fallback}><VPUTab /></Suspense>
       case 7: return <Suspense fallback={fallback}><AntiPiracyTab /></Suspense>
       case 8: return <Suspense fallback={fallback}><AnalyticsTab /></Suspense>
-      case 9: return <Suspense fallback={fallback}><CloudinaryTab /></Suspense>
       default: return null
     }
   }

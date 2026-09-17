@@ -14,7 +14,13 @@ Single-page demo application showcasing Akamai's media delivery stack — from e
 | **Virtual Channels** | Virtual channel creation with Unified Streaming — architecture and EPG views |
 | **MCAP** | Multi-CDN Anti-Piracy — token auth, abuse detection, and revocation |
 | **Analytics** | MediaMelon SDK integration with embeddable dashboard |
-| **Cloudinary** | Cloudinary Video Manager — transformations, player, and DAM |
+
+## Cloudinary Site
+
+Cloudinary lives on its own subdomain (`cloudinary.media-demo.com`) rather than
+as a tab — a searchable, filterable catalog of 36 Cloudinary demos plus
+capabilities, URL transformation examples, and SDK integration. Built from the
+same codebase via a second Vite entry point (`cloudinary.html`).
 
 ## Getting Started
 
@@ -102,6 +108,51 @@ NGINX
 ln -sf /etc/nginx/sites-available/mediademo /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl reload nginx
+```
+
+### Cloudinary subdomain
+
+The build produces two entry points into a single `dist/`:
+
+| File | Site |
+|------|------|
+| `dist/index.html` | Main Akamai Media Solutions demo |
+| `dist/cloudinary.html` | Cloudinary demos |
+
+Both vhosts serve from the **same** document root — only the index file differs,
+so assets are shared and there is nothing extra to copy.
+
+```bash
+cat > /etc/nginx/sites-available/cloudinary <<'NGINX'
+server {
+    listen 80;
+    server_name cloudinary.media-demo.com;
+    root /var/www/mediademo;
+    index cloudinary.html;
+
+    location / {
+        try_files $uri $uri/ /cloudinary.html;
+    }
+
+    location ~* \.(js|css|svg|png|jpg|ico|woff2?)$ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+}
+NGINX
+
+ln -sf /etc/nginx/sites-available/cloudinary /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
+```
+
+Point a DNS `A` record for `cloudinary.media-demo.com` at the Linode IP before
+requesting a certificate.
+
+Cross-site links are configurable via `.env`:
+
+```bash
+VITE_MAIN_SITE_URL=https://mediademo.fde-demo.com
+VITE_CLOUDINARY_SITE_URL=https://cloudinary.media-demo.com
 ```
 
 ### Optional: HTTPS with Let's Encrypt
