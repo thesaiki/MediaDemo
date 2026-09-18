@@ -17,7 +17,7 @@ Single-page demo application showcasing Akamai's media delivery stack — from e
 
 ## Cloudinary Site
 
-Cloudinary lives on its own subdomain (`cloudinary.media-demo.com`) rather than
+Cloudinary lives on its own subdomain (`cloudinary.fde-demo.com`) rather than
 as a tab — a searchable, filterable catalog of 36 Cloudinary demos plus
 capabilities, URL transformation examples, and SDK integration. Built from the
 same codebase via a second Vite entry point (`cloudinary.html`).
@@ -126,7 +126,7 @@ so assets are shared and there is nothing extra to copy.
 cat > /etc/nginx/sites-available/cloudinary <<'NGINX'
 server {
     listen 80;
-    server_name cloudinary.media-demo.com;
+    server_name cloudinary.fde-demo.com;
     root /var/www/mediademo;
     index cloudinary.html;
 
@@ -145,14 +145,14 @@ ln -sf /etc/nginx/sites-available/cloudinary /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
 ```
 
-Point a DNS `A` record for `cloudinary.media-demo.com` at the Linode IP before
+Point a DNS `A` record for `cloudinary.fde-demo.com` at the Linode IP before
 requesting a certificate.
 
 Cross-site links are configurable via `.env`:
 
 ```bash
 VITE_MAIN_SITE_URL=https://mediademo.fde-demo.com
-VITE_CLOUDINARY_SITE_URL=https://cloudinary.media-demo.com
+VITE_CLOUDINARY_SITE_URL=https://cloudinary.fde-demo.com
 ```
 
 ### Optional: HTTPS with Let's Encrypt

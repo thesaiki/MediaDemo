@@ -1,4 +1,4 @@
-const CLOUDINARY_SITE_URL = import.meta.env.VITE_CLOUDINARY_SITE_URL || 'https://cloudinary.media-demo.com'
+const CLOUDINARY_SITE_URL = import.meta.env.VITE_CLOUDINARY_SITE_URL || 'https://cloudinary.fde-demo.com'
 
 export default function Navbar() {
   return (
