@@ -1,0 +1,248 @@
+{
+  "generatedAt": "2026-10-01",
+  "tool": "ffmpeg 8.1 / libvmaf (model vmaf_v0.6.1)",
+  "reference": {
+    "label": "Original (no transformation)",
+    "url": "https://res.cloudinary.com/demo/video/upload/dog.mp4",
+    "bytes": 9094354,
+    "bitrateKbps": 5424,
+    "width": 854,
+    "height": 480,
+    "fps": 29.97,
+    "frames": 402,
+    "durationSec": 13.4134,
+    "codec": "h264"
+  },
+  "renditions": [
+    {
+      "id": "q20",
+      "label": "Aggressive",
+      "transformation": "q_20",
+      "url": "https://res.cloudinary.com/demo/video/upload/q_20/dog.mp4",
+      "bytes": 263723,
+      "bitrateKbps": 157,
+      "metrics": {
+        "vmaf": {
+          "mean": 27.6135,
+          "harmonicMean": 27.174,
+          "min": 19.7629,
+          "max": 39.9073
+        },
+        "adm2": {
+          "mean": 0.7978,
+          "harmonicMean": 0.7976,
+          "min": 0.7462,
+          "max": 0.8375
+        },
+        "vif": {
+          "mean": 0.603,
+          "harmonicMean": 0.6028,
+          "min": 0.5461,
+          "max": 0.6971
+        },
+        "motion": {
+          "mean": 2.2796,
+          "harmonicMean": 1.3888,
+          "min": 0.0,
+          "max": 16.426
+        },
+        "psnrY": {
+          "mean": 31.3583,
+          "harmonicMean": 31.3531,
+          "min": 30.2993,
+          "max": 32.8467
+        },
+        "ssim": {
+          "mean": 0.8873,
+          "harmonicMean": 0.8873,
+          "min": 0.8708,
+          "max": 0.9129
+        }
+      }
+    },
+    {
+      "id": "q30",
+      "label": "Low",
+      "transformation": "q_30",
+      "url": "https://res.cloudinary.com/demo/video/upload/q_30/dog.mp4",
+      "bytes": 396895,
+      "bitrateKbps": 237,
+      "metrics": {
+        "vmaf": {
+          "mean": 60.7017,
+          "harmonicMean": 60.5839,
+          "min": 55.1319,
+          "max": 72.2411
+        },
+        "adm2": {
+          "mean": 0.9028,
+          "harmonicMean": 0.9028,
+          "min": 0.8678,
+          "max": 0.9294
+        },
+        "vif": {
+          "mean": 0.8435,
+          "harmonicMean": 0.8434,
+          "min": 0.7838,
+          "max": 0.9012
+        },
+        "motion": {
+          "mean": 2.2796,
+          "harmonicMean": 1.3888,
+          "min": 0.0,
+          "max": 16.426
+        },
+        "psnrY": {
+          "mean": 35.45,
+          "harmonicMean": 35.445,
+          "min": 34.2414,
+          "max": 37.0715
+        },
+        "ssim": {
+          "mean": 0.9482,
+          "harmonicMean": 0.9481,
+          "min": 0.934,
+          "max": 0.9647
+        }
+      }
+    },
+    {
+      "id": "q40",
+      "label": "Medium",
+      "transformation": "q_40",
+      "url": "https://res.cloudinary.com/demo/video/upload/q_40/dog.mp4",
+      "bytes": 583756,
+      "bitrateKbps": 348,
+      "metrics": {
+        "vmaf": {
+          "mean": 77.0692,
+          "harmonicMean": 77.006,
+          "min": 72.9749,
+          "max": 89.2411
+        },
+        "adm2": {
+          "mean": 0.9416,
+          "harmonicMean": 0.9416,
+          "min": 0.9123,
+          "max": 0.9597
+        },
+        "vif": {
+          "mean": 0.9243,
+          "harmonicMean": 0.9243,
+          "min": 0.8834,
+          "max": 0.9547
+        },
+        "motion": {
+          "mean": 2.2796,
+          "harmonicMean": 1.3888,
+          "min": 0.0,
+          "max": 16.426
+        },
+        "psnrY": {
+          "mean": 38.057,
+          "harmonicMean": 38.0527,
+          "min": 36.6698,
+          "max": 39.7305
+        },
+        "ssim": {
+          "mean": 0.9707,
+          "harmonicMean": 0.9707,
+          "min": 0.9585,
+          "max": 0.9808
+        }
+      }
+    },
+    {
+      "id": "qauto_good",
+      "label": "Cloudinary auto",
+      "transformation": "q_auto:good",
+      "url": "https://res.cloudinary.com/demo/video/upload/q_auto:good/dog.mp4",
+      "bytes": 820940,
+      "bitrateKbps": 490,
+      "metrics": {
+        "vmaf": {
+          "mean": 84.6084,
+          "harmonicMean": 84.5501,
+          "min": 80.736,
+          "max": 96.5207
+        },
+        "adm2": {
+          "mean": 0.9589,
+          "harmonicMean": 0.9589,
+          "min": 0.9289,
+          "max": 0.9719
+        },
+        "vif": {
+          "mean": 0.9551,
+          "harmonicMean": 0.9551,
+          "min": 0.9207,
+          "max": 0.973
+        },
+        "motion": {
+          "mean": 2.2796,
+          "harmonicMean": 1.3888,
+          "min": 0.0,
+          "max": 16.426
+        },
+        "psnrY": {
+          "mean": 39.7791,
+          "harmonicMean": 39.7749,
+          "min": 38.2414,
+          "max": 41.5144
+        },
+        "ssim": {
+          "mean": 0.9801,
+          "harmonicMean": 0.9801,
+          "min": 0.9701,
+          "max": 0.9874
+        }
+      }
+    },
+    {
+      "id": "q50",
+      "label": "High",
+      "transformation": "q_50",
+      "url": "https://res.cloudinary.com/demo/video/upload/q_50/dog.mp4",
+      "bytes": 1121865,
+      "bitrateKbps": 669,
+      "metrics": {
+        "vmaf": {
+          "mean": 88.498,
+          "harmonicMean": 88.4365,
+          "min": 85.4148,
+          "max": 100.0
+        },
+        "adm2": {
+          "mean": 0.9679,
+          "harmonicMean": 0.9679,
+          "min": 0.9422,
+          "max": 0.9796
+        },
+        "vif": {
+          "mean": 0.9693,
+          "harmonicMean": 0.9693,
+          "min": 0.9415,
+          "max": 0.9802
+        },
+        "motion": {
+          "mean": 2.2796,
+          "harmonicMean": 1.3888,
+          "min": 0.0,
+          "max": 16.426
+        },
+        "psnrY": {
+          "mean": 40.9389,
+          "harmonicMean": 40.9349,
+          "min": 39.303,
+          "max": 42.7491
+        },
+        "ssim": {
+          "mean": 0.9846,
+          "harmonicMean": 0.9846,
+          "min": 0.9759,
+          "max": 0.9904
+        }
+      }
+    }
+  ]
+}

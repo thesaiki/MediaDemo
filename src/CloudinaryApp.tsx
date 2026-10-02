@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { CLOUDINARY_DEMOS, DEMO_CATEGORIES, CATEGORY_COLORS } from './data/cloudinaryDemos'
 import type { DemoCategory } from './data/cloudinaryDemos'
+import QualityLab from './components/QualityLab'
 
 const MAIN_SITE_URL = import.meta.env.VITE_MAIN_SITE_URL || 'https://mediademo.fde-demo.com'
 
@@ -134,6 +135,9 @@ export default function CloudinaryApp() {
             </div>
           )}
         </div>
+
+        {/* Quality Lab */}
+        <QualityLab />
 
         {/* Key Capabilities */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
