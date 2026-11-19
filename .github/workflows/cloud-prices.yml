@@ -8,6 +8,11 @@ on:
     - cron: '0 15 * * *'
     - cron: '0 16 * * *'
   workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Test, build, deploy and report even when no prices changed'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -53,12 +58,23 @@ jobs:
           set -o pipefail
           node tools/cloud-calculator/sync/sync-prices.mjs --summary "$RUNNER_TEMP/price-summary.md" 2>&1 | tee "$RUNNER_TEMP/price-sync.log"
 
+      - name: Decide whether to deploy
+        id: decide
+        if: steps.gate.outputs.run == 'true'
+        env:
+          CHANGED: ${{ steps.sync.outputs.changed }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force_deploy }}
+        run: |
+          if [ "$CHANGED" = "true" ] || [ "$FORCE" = "true" ]; then deploy=true; else deploy=false; fi
+          echo "deploy=${deploy}" >> "$GITHUB_OUTPUT"
+          echo "changed=${CHANGED:-false} force=${FORCE} deploy=${deploy}"
+
       - name: Test
-        if: steps.sync.outputs.changed == 'true'
+        if: steps.decide.outputs.deploy == 'true'
         run: npm test
 
       - name: Build the calculator page
-        if: steps.sync.outputs.changed == 'true'
+        if: steps.decide.outputs.deploy == 'true'
         run: node tools/cloud-calculator/build.mjs dist/cloud-calculator/index.html
 
       - name: Commit and push prices.json
@@ -75,7 +91,7 @@ jobs:
           echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Deploy the calculator page
-        if: steps.sync.outputs.changed == 'true'
+        if: steps.decide.outputs.deploy == 'true'
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
@@ -96,18 +112,22 @@ jobs:
           rm -f ~/.ssh/deploy_key
 
       - name: Open an issue with the price changes
-        if: steps.sync.outputs.changed == 'true'
+        if: steps.decide.outputs.deploy == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           {
             cat "$RUNNER_TEMP/price-summary.md"
             echo
-            echo "Committed to main as ${{ steps.commit.outputs.sha }} and deployed to cloudcalculator.fde-demo.com."
+            if [ "${{ steps.sync.outputs.changed }}" = "true" ]; then
+              echo "Committed to main as ${{ steps.commit.outputs.sha }} and deployed to cloudcalculator.fde-demo.com."
+            else
+              echo "Forced deploy from a manual run: no price changes, nothing committed. The page was rebuilt from main and deployed to cloudcalculator.fde-demo.com."
+            fi
             echo "Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           } > "$RUNNER_TEMP/issue.md"
           gh issue create --repo "$GITHUB_REPOSITORY" \
-            --title "Cloud prices updated ${{ steps.commit.outputs.day }}" \
+            --title "${{ steps.sync.outputs.changed == 'true' && 'Cloud prices updated' || 'Cloud calculator force-deployed' }} $(TZ=America/New_York date +%F)" \
             --body-file "$RUNNER_TEMP/issue.md"
 
       - name: Open an issue when the sync is blocked

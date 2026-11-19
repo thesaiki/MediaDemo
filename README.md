@@ -96,7 +96,10 @@ calculator page, commits `prices.json` to `main` as
 `chore(akamai): sync cloud prices YYYY-MM-DD`, uploads the page with rsync
 over SSH to `cloud-calculator/index.html` and opens an issue with the
 summary. When a guard trips it opens an issue with the output and deploys
-nothing.
+nothing. A manual run with **force_deploy** ticked
+(`gh workflow run cloud-prices.yml -f force_deploy=true`) tests, builds,
+uploads and opens an issue even when no prices changed, without committing;
+use it to check the deploy path or to republish the page.
 
 Repository secrets the workflow needs:
 
