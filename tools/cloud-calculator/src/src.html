@@ -496,7 +496,12 @@ document.addEventListener('click', e => {
                cpu:{label:'App tier',plan:'g8-8x4',method:'fixed',count:2,hours:730}}[t.dataset.add];
     state.stages.push(n); renderForm();
   }
-  else if(t.dataset.load){ loadPreset(t.dataset.load); renderForm(); go('planner'); window.scrollTo(0,0); }
+  else if(t.dataset.load){
+    loadPreset(t.dataset.load); renderForm();
+    // Route through the hash so the tabs, reloads and Back stay in step with the visible view.
+    if(location.hash !== '#planner') location.hash = 'planner'; else go('planner');
+    window.scrollTo(0,0);
+  }
   else if(t.dataset.f){ document.querySelectorAll('[data-f]').forEach(b => b.setAttribute('aria-pressed', String(b===t))); document.querySelectorAll('.uc').forEach(c => c.hidden = !(t.dataset.f==='all' || c.dataset.group===t.dataset.f)); }
 });
 $('#preset').addEventListener('change', e => { loadPreset(e.target.value); renderForm(); });
