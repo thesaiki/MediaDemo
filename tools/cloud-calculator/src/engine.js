@@ -1,5 +1,5 @@
 // ---------- Linode AI & Media cost engine (pure functions, no DOM) ----------
-const PRICES_ASOF = '23 October 2026';
+const PRICES_ASOF = PRICE_BOOK.asOf; // ISO date of the last price change
 const H = 730; // planning-month hours convention
 
 const SRC = {
@@ -20,59 +20,12 @@ const SRC = {
   user: { t: 'Your assumption', u: '' }
 };
 
+// Price data lives in prices.json and is injected ahead of this file as PRICE_BOOK
+// (build.mjs and the tests do this). sync/sync-prices.mjs refreshes it from the public API.
 // hr = $/hour, mo = monthly cap where the official page lists one, tb = bundled transfer (TB/month)
-const PLANS = {
-  'ada-1s': { name: 'RTX 4000 Ada x1 Small', fam: 'GPU', hr: 0.52, tb: 0, spec: '1× RTX 4000 Ada · 4 vCPU · 16 GB', src: 'gpu' },
-  'ada-1m': { name: 'RTX 4000 Ada x1 Medium', fam: 'GPU', hr: 0.67, tb: 0, spec: '1× RTX 4000 Ada · 8 vCPU · 32 GB', src: 'gpu' },
-  'ada-1l': { name: 'RTX 4000 Ada x1 Large', fam: 'GPU', hr: 0.96, tb: 0, spec: '1× RTX 4000 Ada · 16 vCPU · 64 GB', src: 'gpu' },
-  'ada-1xl': { name: 'RTX 4000 Ada x1 X-Large', fam: 'GPU', hr: 1.53, tb: 0, spec: '1× RTX 4000 Ada · 32 vCPU · 128 GB', src: 'gpu' },
-  'ada-2s': { name: 'RTX 4000 Ada x2 Small', fam: 'GPU', hr: 1.05, tb: 0, spec: '2× RTX 4000 Ada · 8 vCPU · 32 GB', src: 'gpu' },
-  'ada-2m': { name: 'RTX 4000 Ada x2 Medium', fam: 'GPU', hr: 1.34, tb: 0, spec: '2× RTX 4000 Ada · 16 vCPU · 64 GB', src: 'gpu' },
-  'ada-4s': { name: 'RTX 4000 Ada x4 Small', fam: 'GPU', hr: 2.96, tb: 0, spec: '4× RTX 4000 Ada · 32 vCPU · 128 GB', src: 'gpu' },
-  'ada-4m': { name: 'RTX 4000 Ada x4 Medium', fam: 'GPU', hr: 3.57, tb: 0, spec: '4× RTX 4000 Ada · 48 vCPU · 196 GB', src: 'gpu' },
-  'bw-1': { name: 'RTX PRO 6000 Blackwell x1', fam: 'GPU', hr: 3.00, tb: 0, spec: '1× 96 GB VRAM · 16 vCPU · 176 GB', src: 'gpu' },
-  'bw-2': { name: 'RTX PRO 6000 Blackwell x2', fam: 'GPU', hr: 6.00, tb: 0, spec: '2× 96 GB VRAM · 32 vCPU · 352 GB', src: 'gpu' },
-  'bw-4': { name: 'RTX PRO 6000 Blackwell x4', fam: 'GPU', hr: 12.00, tb: 0, spec: '4× 96 GB VRAM · 64 vCPU · 704 GB', src: 'gpu' },
-  'bw-8': { name: 'RTX PRO 6000 Blackwell x8', fam: 'GPU', hr: 24.00, tb: 0, spec: '8× 96 GB VRAM · 128 vCPU · 1408 GB', src: 'gpu' },
-  'q6k-1': { name: 'Quadro RTX 6000 x1 (Dedicated 32 GB)', fam: 'GPU', hr: 1.50, tb: 16, spec: '1× Quadro RTX 6000 · 8 CPU · 32 GB', src: 'gpu' },
-  'vpu-1s': { name: 'NETINT Quadra T1U VPU x1 Small', fam: 'VPU', hr: 0.42, mo: 280, tb: 0, spec: '1 VPU · 8 vCPU · 16 GB', src: 'vpu' },
-  'vpu-1m': { name: 'NETINT Quadra T1U VPU x1 Medium', fam: 'VPU', hr: 0.53, mo: 352, tb: 0, spec: '1 VPU · 12 vCPU · 24 GB', src: 'vpu' },
-  'vpu-2s': { name: 'NETINT Quadra T1U VPU x2 Small', fam: 'VPU', hr: 0.73, mo: 488, tb: 0, spec: '2 VPU · 12 vCPU · 24 GB', src: 'vpu' },
-  'g8-4x2': { name: 'G8 Dedicated 4x2', fam: 'CPU', hr: 0.07, tb: 0, spec: '2 vCPU · 4 GB', src: 'cpu' },
-  'g8-8x4': { name: 'G8 Dedicated 8x4', fam: 'CPU', hr: 0.14, tb: 0, spec: '4 vCPU · 8 GB', src: 'cpu' },
-  'g8-16x8': { name: 'G8 Dedicated 16x8', fam: 'CPU', hr: 0.27, tb: 0, spec: '8 vCPU · 16 GB', src: 'cpu' },
-  'g8-32x16': { name: 'G8 Dedicated 32x16', fam: 'CPU', hr: 0.54, tb: 0, spec: '16 vCPU · 32 GB', src: 'cpu' },
-  'g8-64x32': { name: 'G8 Dedicated 64x32', fam: 'CPU', hr: 1.08, tb: 0, spec: '32 vCPU · 64 GB', src: 'cpu' },
-  'g8-16x4': { name: 'G8 Dedicated 16x4 (1:4)', fam: 'CPU', hr: 0.21, tb: 0, spec: '4 vCPU · 16 GB', src: 'cpu' },
-  'g8-32x8': { name: 'G8 Dedicated 32x8 (1:4)', fam: 'CPU', hr: 0.42, tb: 0, spec: '8 vCPU · 32 GB', src: 'cpu' },
-  'g8-64x16': { name: 'G8 Dedicated 64x16 (1:4)', fam: 'CPU', hr: 0.84, tb: 0, spec: '16 vCPU · 64 GB', src: 'cpu' },
-  'g7-8': { name: 'G7 Dedicated 8 GB', fam: 'CPU', hr: 0.13, mo: 86, tb: 5, spec: '4 vCPU · 8 GB · 5 TB transfer', src: 'cpu' },
-  'g7-16': { name: 'G7 Dedicated 16 GB', fam: 'CPU', hr: 0.26, mo: 173, tb: 6, spec: '8 vCPU · 16 GB · 6 TB transfer', src: 'cpu' },
-  'g7-32': { name: 'G7 Dedicated 32 GB', fam: 'CPU', hr: 0.52, mo: 346, tb: 7, spec: '16 vCPU · 32 GB · 7 TB transfer', src: 'cpu' },
-  'sh-4': { name: 'Shared Linode 4 GB', fam: 'CPU', hr: 0.036, mo: 24, tb: 4, spec: '2 CPU · 4 GB · 4 TB transfer', src: 'cpu' },
-  'sh-8': { name: 'Shared Linode 8 GB', fam: 'CPU', hr: 0.072, mo: 48, tb: 5, spec: '4 CPU · 8 GB · 5 TB transfer', src: 'cpu' },
-  'sh-16': { name: 'Shared Linode 16 GB', fam: 'CPU', hr: 0.144, mo: 96, tb: 8, spec: '6 CPU · 16 GB · 8 TB transfer', src: 'cpu' },
-  'hm-24': { name: 'High Memory 24 GB', fam: 'CPU', hr: 0.09, mo: 60, tb: 5, spec: '2 CPU · 24 GB · 5 TB transfer', src: 'cpu' },
-  'hm-48': { name: 'High Memory 48 GB', fam: 'CPU', hr: 0.18, mo: 120, tb: 6, spec: '2 CPU · 48 GB · 6 TB transfer', src: 'cpu' }
-};
-
-const DBPLANS = {
-  none: { name: 'None', p: {} },
-  'pg-sh4': { name: 'PostgreSQL · Shared 4 GB', p: { 1: 63, 3: 147 } },
-  'pg-sh8': { name: 'PostgreSQL · Shared 8 GB', p: { 1: 126, 3: 294 } },
-  'pg-g7-4': { name: 'PostgreSQL · G7 Dedicated 4 GB', p: { 1: 81.6, 2: 171.6, 3: 246 } },
-  'pg-g7-8': { name: 'PostgreSQL · G7 Dedicated 8 GB', p: { 1: 163.2, 2: 342, 3: 492 } },
-  'pg-g7-16': { name: 'PostgreSQL · G7 Dedicated 16 GB', p: { 1: 327.6, 2: 708, 3: 982.8 } },
-  'pg-g7-32': { name: 'PostgreSQL · G7 Dedicated 32 GB', p: { 1: 655.2, 2: 1401.6, 3: 1965.6 } },
-  'vk-g7-4': { name: 'Valkey · G7 Dedicated 4 GB (monthly)', p: { 1: 59, 2: 117, 3: 176 } },
-  'vk-g7-8': { name: 'Valkey · G7 Dedicated 8 GB (monthly)', p: { 1: 117, 2: 234, 3: 351 } }
-};
-
-const RATES = {
-  egressPerGB: 0.005, objBase: 5, objIncludedGB: 250, objPerGB: 0.02, objPoolTB: 1,
-  blockPerGB: 0.10, nbBasicMo: 10, nbPremiumHr: 0.225, nbPremiumPerGB: 0.005,
-  lkeHA: 60, lkeEnt: 300, managedPerInstance: 100
-};
+const PLANS = PRICE_BOOK.plans;
+const DBPLANS = PRICE_BOOK.dbPlans;
+const RATES = Object.fromEntries(Object.entries(PRICE_BOOK.rates).map(([k, r]) => [k, r.value]));
 
 // Serving profiles: throughput is AGGREGATE per instance under continuous batching.
 const PROFILES = {
@@ -232,4 +185,4 @@ function calc(s) {
   };
 }
 
-if (typeof module !== 'undefined') module.exports = { calc, PLANS, DBPLANS, RATES, PROFILES, SRC, H, PRICES_ASOF };
+if (typeof module !== 'undefined') module.exports = { calc, PLANS, DBPLANS, RATES, PROFILES, SRC, H, PRICES_ASOF, PRICE_BOOK };
