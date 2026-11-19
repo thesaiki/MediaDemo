@@ -1,0 +1,50 @@
+{
+  "version": 2,
+  "about": "How sync-prices.mjs reads the public Akamai Cloud (Linode) API. Per-plan API ids live in src/prices.json (apiId on entries with sync 'api'); this file holds the endpoints, field rules, rate mappings and the plan families scanned for new plans. Base prices only; region_prices are ignored.",
+  "base": "https://api.linode.com/v4/",
+  "query": "page_size=500",
+  "endpoints": [
+    "linode/types",
+    "lke/types",
+    "databases/types",
+    "nodebalancers/types",
+    "object-storage/types",
+    "network-transfer/prices",
+    "volumes/types"
+  ],
+  "planFields": {
+    "hr": { "endpoint": "linode/types", "field": "price.hourly", "transform": "identity", "required": true },
+    "mo": { "endpoint": "linode/types", "field": "price.monthly", "transform": "identity", "required": false, "note": "monthly cap; null in the API means hourly only" },
+    "tb": { "endpoint": "linode/types", "field": "transfer", "transform": "gb_to_tb", "required": true, "note": "bundled transfer, GB / 1000" }
+  },
+  "dbPlans": {
+    "endpoint": "databases/types",
+    "note": "price = engines.<engine>[quantity=N].price.monthly, the whole-cluster monthly price for N nodes"
+  },
+  "rates": {
+    "egressPerGB": { "endpoint": "network-transfer/prices", "id": "network_transfer", "field": "price.hourly", "transform": "identity", "note": "the API puts $/GB in the hourly slot" },
+    "objBase": { "endpoint": "object-storage/types", "id": "objectstorage", "field": "price.monthly", "transform": "identity" },
+    "objPerGB": { "endpoint": "object-storage/types", "id": "objectstorage-overage", "field": "price.hourly", "transform": "identity", "note": "the API puts $/GB overage in the hourly slot" },
+    "objPoolTB": { "endpoint": "object-storage/types", "id": "objectstorage", "field": "transfer", "transform": "gb_to_tb" },
+    "blockPerGB": { "endpoint": "volumes/types", "id": "volume", "field": "price.monthly", "transform": "identity", "note": "per GB-month" },
+    "nbBasicMo": { "endpoint": "nodebalancers/types", "id": "nodebalancer", "field": "price.monthly", "transform": "identity" },
+    "nbPremiumHr": { "endpoint": "nodebalancers/types", "id": "nodebalancer-pr100", "field": "price.hourly", "transform": "identity" },
+    "lkeHA": { "endpoint": "lke/types", "id": "lke-ha", "field": "price.monthly", "transform": "identity" },
+    "lkeEnt": { "endpoint": "lke/types", "id": "lke-e", "field": "price.monthly", "transform": "identity" }
+  },
+  "manual": {
+    "plans": "RTX PRO 6000 Blackwell (bw-*) is not listed by the public API; keep hr and tb by hand.",
+    "rates": "objIncludedGB, nbPremiumPerGB and managedPerInstance have no API field; keep them by hand."
+  },
+  "families": [
+    { "match": "^g2-gpu-rtx4000a", "fam": "GPU", "src": "gpu", "line": "RTX 4000 Ada", "name": "{label}", "labelReplace": [["RTX4000", "RTX 4000"]], "spec": "{gpus}× RTX 4000 Ada · {vcpus} vCPU · {memGB} GB{xfer}" },
+    { "match": "^g1-gpu-rtx6000-", "fam": "GPU", "src": "gpu", "line": "Quadro RTX 6000", "name": "Quadro RTX 6000 x{gpus} (Dedicated {memGB} GB)", "spec": "{gpus}× Quadro RTX 6000 · {vcpus} CPU · {memGB} GB{xfer}" },
+    { "match": "^g1-accelerated-netint-vpu-", "fam": "VPU", "src": "vpu", "line": "NETINT Quadra T1U VPU", "name": "{label}", "labelReplace": [[" x(\\d+)", " VPU x$1"]], "spec": "{vpus} VPU · {vcpus} vCPU · {memGB} GB{xfer}" },
+    { "match": "^g8-dedicated-", "fam": "CPU", "src": "cpu", "line": "G8 Dedicated", "name": "{label}{ratioTag}", "spec": "{vcpus} vCPU · {memGB} GB{xfer}" },
+    { "match": "^g7-dedicated-", "fam": "CPU", "src": "cpu", "line": "G7 Dedicated", "name": "G7 Dedicated {memGB} GB", "spec": "{vcpus} vCPU · {memGB} GB{xfer}" },
+    { "match": "^g6-nanode-", "fam": "CPU", "src": "cpu", "line": "Shared", "name": "Shared Nanode {memGB} GB", "spec": "{vcpus} CPU · {memGB} GB{xfer}" },
+    { "match": "^g6-standard-", "fam": "CPU", "src": "cpu", "line": "Shared", "name": "Shared Linode {memGB} GB", "spec": "{vcpus} CPU · {memGB} GB{xfer}" },
+    { "match": "^g7-highmem-", "fam": "CPU", "src": "cpu", "line": "High Memory", "name": "High Memory {memGB} GB", "spec": "{vcpus} CPU · {memGB} GB{xfer}" }
+  ],
+  "ignoreIds": []
+}

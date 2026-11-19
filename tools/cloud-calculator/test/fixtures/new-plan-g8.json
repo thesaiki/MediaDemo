@@ -1,0 +1,50 @@
+{
+  "id": "g8-dedicated-96-48",
+  "label": "G8 Dedicated 96x48",
+  "price": {
+    "hourly": 1.62,
+    "monthly": null
+  },
+  "region_prices": [
+    {
+      "id": "id-cgk",
+      "hourly": 1.944,
+      "monthly": null
+    },
+    {
+      "id": "br-gru",
+      "hourly": 2.268,
+      "monthly": null
+    }
+  ],
+  "addons": {
+    "backups": {
+      "price": {
+        "hourly": 0.08847,
+        "monthly": 58.98
+      },
+      "region_prices": [
+        {
+          "id": "id-cgk",
+          "hourly": 0.10616,
+          "monthly": 70.78
+        },
+        {
+          "id": "br-gru",
+          "hourly": 0.12386,
+          "monthly": 82.57
+        }
+      ]
+    }
+  },
+  "memory": 98304,
+  "disk": 1006592,
+  "transfer": 0,
+  "vcpus": 48,
+  "gpus": 0,
+  "network_out": 9000,
+  "class": "dedicated",
+  "successor": null,
+  "capabilities": [],
+  "accelerated_devices": 0
+}

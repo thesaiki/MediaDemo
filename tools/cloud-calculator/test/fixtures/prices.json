@@ -1,0 +1,87 @@
+{
+  "asOf": "2026-10-23",
+  "plans": {
+    "ada-1m": {
+      "name": "RTX 4000 Ada x1 Medium",
+      "fam": "GPU",
+      "hr": 0.67,
+      "tb": 0,
+      "spec": "1× RTX 4000 Ada · 8 vCPU · 32 GB",
+      "src": "gpu",
+      "line": "RTX 4000 Ada",
+      "sync": "api",
+      "apiId": "g2-gpu-rtx4000a1-m"
+    },
+    "bw-1": {
+      "name": "RTX PRO 6000 Blackwell x1",
+      "fam": "GPU",
+      "hr": 3,
+      "tb": 0,
+      "spec": "1× 96 GB VRAM · 16 vCPU · 176 GB",
+      "src": "gpu",
+      "line": "RTX PRO 6000 Blackwell",
+      "sync": "manual"
+    },
+    "g8-8x4": {
+      "name": "G8 Dedicated 8x4",
+      "fam": "CPU",
+      "hr": 0.14,
+      "tb": 0,
+      "spec": "4 vCPU · 8 GB",
+      "src": "cpu",
+      "line": "G8 Dedicated",
+      "sync": "manual"
+    },
+    "g7-8": {
+      "name": "G7 Dedicated 8 GB",
+      "fam": "CPU",
+      "hr": 0.129,
+      "mo": 86,
+      "tb": 5,
+      "spec": "4 vCPU · 8 GB · 5 TB transfer",
+      "src": "cpu",
+      "line": "G7 Dedicated",
+      "sync": "api",
+      "apiId": "g7-dedicated-8-4"
+    }
+  },
+  "dbPlans": {
+    "none": {
+      "name": "None",
+      "p": {},
+      "sync": "manual"
+    },
+    "pg-g7-4": {
+      "name": "PostgreSQL · G7 Dedicated 4 GB",
+      "p": {
+        "1": 81.6,
+        "2": 171.6,
+        "3": 246
+      },
+      "sync": "api",
+      "apiId": "g7-dedicated-4-2",
+      "engine": "postgresql"
+    }
+  },
+  "rates": {
+    "egressPerGB": {
+      "label": "Outbound transfer overage",
+      "unit": "$/GB",
+      "value": 0.005,
+      "sync": "api"
+    },
+    "lkeHA": {
+      "label": "LKE HA control plane",
+      "unit": "$/cluster/month",
+      "value": 60,
+      "sync": "api"
+    },
+    "managedPerInstance": {
+      "label": "Linode Managed",
+      "unit": "$/instance/month",
+      "value": 100,
+      "sync": "manual"
+    }
+  },
+  "changes": []
+}
