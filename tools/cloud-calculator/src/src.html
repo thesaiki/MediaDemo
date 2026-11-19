@@ -1,0 +1,626 @@
+<title>Linode AI &amp; Media Cost Planner</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: control-room ledger — inputs on the left, a meter column on the right, audit trail full width beneath. */
+:root{
+  --bg:#f2f5f6; --surface:#ffffff; --sunk:#e8eef0; --ink:#13212a; --muted:#566872; --line:#d4dde2; --line-strong:#b9c6cd;
+  --accent:#0a7680; --accent-soft:#d9eef0; --accent-ink:#ffffff; --media:#a9551f; --media-soft:#f6e4d7;
+  --warn:#8a5d00; --warn-bg:#fff2cf; --good:#2d7a3a; --good-bg:#dff1e2; --bad:#a3271f; --bad-bg:#f9e0dd;
+  --l-serve:#0a7680; --l-api:#7652b8; --l-pipe:#a9551f; --l-plat:#3567ad; --l-net:#5a8526; --l-svc:#7d8791;
+  --f-display:"Archivo","Helvetica Neue",Arial,sans-serif; --f-body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c1418; --surface:#131e24; --sunk:#192830; --ink:#e1e9ed; --muted:#93a5ae; --line:#24363e; --line-strong:#334a54;
+  --accent:#3bb2ba; --accent-soft:#12343a; --accent-ink:#03201f; --media:#e38a50; --media-soft:#3a2416;
+  --warn:#f0c252; --warn-bg:#33290c; --good:#7bcf86; --good-bg:#14301a; --bad:#f08a80; --bad-bg:#3a1714;
+  --l-serve:#3bb2ba; --l-api:#a68be3; --l-pipe:#e38a50; --l-plat:#6f9be0; --l-net:#93c45a; --l-svc:#9aa4ad; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1418; --surface:#131e24; --sunk:#192830; --ink:#e1e9ed; --muted:#93a5ae; --line:#24363e; --line-strong:#334a54;
+  --accent:#3bb2ba; --accent-soft:#12343a; --accent-ink:#03201f; --media:#e38a50; --media-soft:#3a2416;
+  --warn:#f0c252; --warn-bg:#33290c; --good:#7bcf86; --good-bg:#14301a; --bad:#f08a80; --bad-bg:#3a1714;
+  --l-serve:#3bb2ba; --l-api:#a68be3; --l-pipe:#e38a50; --l-plat:#6f9be0; --l-net:#93c45a; --l-svc:#9aa4ad; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1320px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.num,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+/* Masthead */
+header.mast{border-bottom:1px solid var(--line);background:var(--surface)}
+header.mast .wrap{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 28px;padding-block:20px 0}
+.brand h1{font:700 clamp(1.35rem,2.4vw,1.8rem)/1.1 var(--f-display);font-stretch:112%;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.brand h1 b{color:var(--accent);font-weight:800}
+.brand .back{display:inline-block;margin:0 0 8px;color:var(--muted);font:600 .8rem/1.2 var(--f-body);text-decoration:none}
+.brand .back:hover{color:var(--accent);text-decoration:underline}
+.brand p{margin:6px 0 14px;color:var(--muted);font-size:.86rem}
+.brand p .mono{font-size:.8rem}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin-bottom:-1px}
+nav.tabs a{display:block;padding:10px 14px;text-decoration:none;color:var(--muted);font:600 .86rem/1 var(--f-body);border:1px solid transparent;border-bottom:none;border-radius:var(--r) var(--r) 0 0;white-space:nowrap}
+nav.tabs a[aria-current="page"]{color:var(--ink);background:var(--bg);border-color:var(--line)}
+main{padding-block:22px 48px}
+section.view{display:grid;gap:20px}
+
+/* Scenario bar */
+.scenebar{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:end;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.scenebar .fld{min-width:0;flex:1 1 220px}
+.route{display:flex;flex-direction:column;gap:4px;flex:0 1 auto;max-width:100%}
+.rlab{font-size:.76rem;font-weight:600;color:var(--muted);letter-spacing:.02em}
+.seg{max-width:100%}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:var(--r);overflow:hidden}
+.seg button{border:0;background:var(--surface);padding:8px 12px;font-size:.82rem;font-weight:600;cursor:pointer;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line-strong)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+
+/* Two-column planner */
+.planner{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start}
+.inputs{display:grid;gap:12px;min-width:0}
+aside.meter{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);display:grid;gap:12px;min-width:0}
+@media (max-width:960px){.planner{grid-template-columns:minmax(0,1fr)} aside.meter{position:static;order:-1}}
+
+details.sec{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+details.sec>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:10px;padding:12px 16px;font:650 .98rem/1.2 var(--f-display);font-stretch:105%}
+details.sec>summary::-webkit-details-marker{display:none}
+details.sec>summary::before{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s;flex:none;align-self:center}
+details.sec[open]>summary::before{transform:rotate(45deg)}
+details.sec>summary .tag{font:500 .72rem/1 var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+details.sec>summary .sec-total{margin-left:auto;font:500 .85rem var(--f-mono);color:var(--muted)}
+.secbody{padding:4px 16px 16px;display:grid;gap:14px}
+.intro{margin:0;color:var(--muted);font-size:.86rem;max-width:72ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px 14px}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld .lab{font-size:.76rem;font-weight:600;color:var(--muted);letter-spacing:.02em}
+.ctl{display:flex;align-items:center;border:1px solid var(--line-strong);border-radius:var(--r);background:var(--surface);min-width:0}
+.ctl:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.ctl input,.ctl select{border:0;background:transparent;padding:8px 10px;width:100%;min-width:0;outline:none}
+.ctl input[type=number]{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.ctl .suf{padding-right:10px;color:var(--muted);font-size:.76rem;white-space:nowrap}
+.fld .hint{font-size:.74rem;color:var(--muted);line-height:1.35}
+.derived{display:flex;flex-wrap:wrap;gap:6px 18px;background:var(--sunk);border-radius:var(--r);padding:10px 12px;font-size:.8rem;color:var(--muted)}
+.derived b{color:var(--ink);font-family:var(--f-mono);font-weight:500}
+
+.stage{border:1px solid var(--line);border-left:3px solid var(--l-pipe);border-radius:var(--r);padding:12px;display:grid;gap:12px;background:var(--surface)}
+.stage .top{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+.stage .top .fld{flex:1 1 200px}
+.btn{border:1px solid var(--line-strong);background:var(--surface);border-radius:var(--r);padding:8px 12px;font-size:.84rem;font-weight:600;cursor:pointer}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08);color:var(--accent-ink)}
+.btn.ghost{border-color:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--bad);border-color:var(--bad)}
+.row-actions{display:flex;flex-wrap:wrap;gap:8px}
+
+/* Meter */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.kpi-main .eyebrow{font:600 .72rem/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.kpi-main .big{font:700 clamp(2rem,4vw,2.6rem)/1.05 var(--f-display);font-stretch:108%;font-variant-numeric:tabular-nums;margin:8px 0 2px;letter-spacing:-.01em}
+.kpi-main .sub{font-size:.82rem;color:var(--muted)}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-top:14px}
+.kpis div{background:var(--surface);padding:10px 12px;min-width:0}
+.kpis dt{font-size:.72rem;color:var(--muted);font-weight:600}
+.kpis dd{margin:2px 0 0;font:500 1rem var(--f-mono);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.stack{display:flex;height:14px;border-radius:3px;overflow:hidden;background:var(--sunk);margin:4px 0 12px}
+.stack span{display:block;height:100%}
+.legend{display:grid;gap:6px;margin:0;padding:0;list-style:none;font-size:.82rem}
+.legend li{display:grid;grid-template-columns:10px 1fr auto auto;gap:8px;align-items:center}
+.legend i{width:10px;height:10px;border-radius:2px}
+.legend .amt{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.legend .pct{font-family:var(--f-mono);color:var(--muted);width:3.2em;text-align:right;font-size:.76rem}
+.card h3{font:650 .9rem/1.2 var(--f-display);font-stretch:105%;margin:0 0 10px}
+.compare{display:grid;gap:8px;font-size:.84rem}
+.cmp-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:baseline}
+.cmp-row .mono{font-size:.9rem}
+.bar2{height:8px;border-radius:2px;background:var(--sunk);overflow:hidden}
+.bar2 span{display:block;height:100%}
+.chip{display:inline-block;font:600 .72rem/1 var(--f-body);padding:5px 8px;border-radius:99px}
+.chip.good{background:var(--good-bg);color:var(--good)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.info{background:var(--accent-soft);color:var(--accent)}
+.chip.media{background:var(--media-soft);color:var(--media)}
+.warns{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.warns li{background:var(--warn-bg);color:var(--ink);border-left:3px solid var(--warn);padding:8px 10px;border-radius:0 var(--r) var(--r) 0;font-size:.8rem}
+.factrows{display:grid;gap:4px;font-size:.82rem}
+.factrows div{display:flex;justify-content:space-between;gap:12px}
+.factrows span:last-child{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+
+/* Audit */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.82rem}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:var(--sunk);white-space:nowrap}
+td.r,th.r{text-align:right}
+td.num{white-space:nowrap}
+td .note{color:var(--muted);font-size:.76rem;display:block;margin-top:2px;min-width:240px}
+tr.total td{font-weight:600;border-bottom:none}
+.layerdot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:middle}
+h2.sh{font:700 1.15rem/1.2 var(--f-display);font-stretch:108%;margin:0}
+.shrow{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px}
+textarea#io{width:100%;min-height:140px;font:12px/1.45 var(--f-mono);border:1px solid var(--line-strong);border-radius:var(--r);background:var(--surface);padding:10px}
+.toast{font-size:.8rem;color:var(--good);min-height:1.2em}
+
+/* Library */
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.filters button{border:1px solid var(--line-strong);background:var(--surface);border-radius:99px;padding:6px 14px;font-size:.82rem;font-weight:600;cursor:pointer;color:var(--muted)}
+.filters button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.libgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));gap:14px}
+.uc{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.uc[data-group="Media"]{border-top:3px solid var(--media)}
+.uc[data-group="AI"]{border-top:3px solid var(--accent)}
+.uc h3{font:650 1.02rem/1.25 var(--f-display);font-stretch:105%;margin:0;text-wrap:balance}
+.uc p{margin:0;font-size:.86rem}
+.uc .meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.uc dl{margin:0;display:grid;gap:8px;font-size:.8rem}
+.uc dt{font-weight:600;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.uc dd{margin:2px 0 0}
+.uc ul{margin:2px 0 0;padding-left:18px}
+.uc .foot{margin-top:auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding-top:10px;border-top:1px solid var(--line)}
+.uc .est{font:500 .95rem var(--f-mono)}
+.uc .est small{display:block;font:500 .7rem var(--f-body);color:var(--muted)}
+
+/* Prose */
+.prose{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:clamp(16px,3vw,32px);display:grid;gap:14px}
+.prose>*{max-width:76ch;margin:0}
+.prose h2{font:700 1.25rem/1.2 var(--f-display);font-stretch:108%;margin-top:14px}
+.prose h2:first-child{margin-top:0}
+.prose h3{font:650 1rem/1.25 var(--f-display);margin-top:6px}
+.prose pre{background:var(--sunk);border-radius:var(--r);padding:12px 14px;overflow-x:auto;font:12.5px/1.6 var(--f-mono);max-width:100%}
+.prose ul,.prose ol{padding-left:20px}
+.prose li+li{margin-top:4px}
+.analogy{border-left:3px solid var(--accent);background:var(--accent-soft);padding:12px 14px;border-radius:0 var(--r) var(--r) 0}
+.pricegrid{display:grid;gap:16px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-size:.78rem}
+footer .wrap{padding-block:18px 28px;display:grid;gap:6px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="mast">
+  <div class="wrap">
+    <div class="brand">
+      <a class="back" href="https://mediademo.fde-demo.com/" data-main-site>&larr; Back to Media Solutions</a>
+      <h1>Linode <b>AI&nbsp;&amp;&nbsp;Media</b> Cost Planner</h1>
+      <p>Akamai Cloud list prices, USD, snapshot <span class="mono" id="asof"></span>. A planning tool, not a quote.</p>
+    </div>
+    <nav class="tabs" aria-label="Sections">
+      <a href="#planner" data-view="planner">Planner</a>
+      <a href="#library" data-view="library">Use-case library</a>
+      <a href="#method" data-view="method">How costing works</a>
+      <a href="#prices" data-view="prices">Price book</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- PLANNER -->
+  <section class="view" id="v-planner">
+    <div class="scenebar">
+      <label class="fld"><span class="lab">Start from a use case</span><span class="ctl"><select id="preset"></select></span></label>
+      <label class="fld"><span class="lab">Scenario name</span><span class="ctl"><input id="f-name" data-k="name" type="text"></span></label>
+      <div class="route"><span class="lab rlab">Model routing</span>
+        <div class="seg" role="group" aria-label="Model routing">
+          <button type="button" data-route="100">Linode only</button><button type="button" data-route="70">Hybrid 70/30</button><button type="button" data-route="0">External API only</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="planner">
+      <div class="inputs" id="form"></div>
+      <aside class="meter" id="meter" aria-live="polite"></aside>
+    </div>
+
+    <div class="shrow"><h2 class="sh">Audit trail</h2><span class="intro">Every line, its billing unit, the rate used and where the rate comes from.</span></div>
+    <div class="tablewrap" id="audit"></div>
+
+    <div class="card">
+      <div class="shrow"><h3>Save, share or reload a scenario</h3><span class="toast" id="toast" role="status"></span></div>
+      <div class="row-actions">
+        <button class="btn" type="button" id="b-json">Copy scenario JSON</button>
+        <button class="btn" type="button" id="b-csv">Copy audit CSV</button>
+        <button class="btn" type="button" id="b-load">Load JSON from the box</button>
+        <button class="btn ghost" type="button" id="b-reset">Reset to selected use case</button>
+      </div>
+      <label class="fld" style="margin-top:12px"><span class="lab">Scenario JSON / CSV (copied text also appears here)</span>
+        <textarea id="io" spellcheck="false" placeholder="Paste a saved scenario JSON here, then choose “Load JSON from the box”."></textarea></label>
+    </div>
+  </section>
+
+  <!-- LIBRARY -->
+  <section class="view" id="v-library" hidden>
+    <div class="shrow">
+      <h2 class="sh">Use-case library</h2>
+      <div class="filters" role="group" aria-label="Filter">
+        <button type="button" data-f="all" aria-pressed="true">All 17</button><button type="button" data-f="AI" aria-pressed="false">AI workloads</button><button type="button" data-f="Media" aria-pressed="false">Media AI</button>
+      </div>
+    </div>
+    <p class="intro">Ten AI workloads mapped to Linode building blocks, plus seven Media AI workloads. Each loads a full scenario with illustrative volumes. Replace them with numbers from your pilot or benchmark before using a figure in a proposal.</p>
+    <div class="libgrid" id="lib"></div>
+  </section>
+
+  <!-- METHOD -->
+  <section class="view" id="v-method" hidden>
+    <article class="prose" id="methodbody"></article>
+  </section>
+
+  <!-- PRICES -->
+  <section class="view" id="v-prices" hidden>
+    <div class="pricegrid" id="pricebody"></div>
+  </section>
+</main>
+
+<footer><div class="wrap">
+  <span>Calculations run in your browser. Nothing is sent anywhere; the current scenario is kept only in this browser.</span>
+  <span>List prices exclude taxes, commitments and negotiated discounts.</span>
+</div></footer>
+
+<script>
+/*ENGINE*/
+/*PRESETS*/
+</script>
+<script>
+(function(){
+'use strict';
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS = 'linode-ai-media-planner-v1';
+const LAYERS = [
+  ['Model serving','--l-serve'],['External API','--l-api'],['Pipeline compute','--l-pipe'],
+  ['Platform & data','--l-plat'],['Network','--l-net'],['Services & people','--l-svc']
+];
+const layerVar = n => (LAYERS.find(l => l[0] === n) || [0,'--l-svc'])[1];
+
+function money(n){
+  if(!isFinite(n)) return '—';
+  const a = Math.abs(n);
+  if(a >= 1000) return '$' + n.toLocaleString('en-US',{maximumFractionDigits:0});
+  if(a >= 1 || a === 0) return '$' + n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return '$' + n.toPrecision(3);
+}
+const qty = n => !isFinite(n) ? '—' : (Math.abs(n) >= 100 ? Math.round(n).toLocaleString('en-US') : (+n.toFixed(2)).toLocaleString('en-US'));
+const compact = n => n >= 1e9 ? (n/1e9).toFixed(2)+'B' : n >= 1e6 ? (n/1e6).toFixed(2)+'M' : n >= 1e4 ? (n/1e3).toFixed(1)+'k' : qty(n);
+
+let state, presetId;
+function loadPreset(id){
+  const uc = USE_CASES.find(u => u.id === id) || USE_CASES[0];
+  presetId = uc.id; state = uc.s(); state.useCase = uc.id;
+}
+try{
+  const saved = JSON.parse(localStorage.getItem(LS) || 'null');
+  if(saved && saved.workload){ state = Object.assign(base(), saved); presetId = saved.useCase || 'support'; }
+}catch(e){}
+if(!state) loadPreset('support');
+function persist(){ try{ localStorage.setItem(LS, JSON.stringify(state)); }catch(e){} }
+
+const getP = (o,p) => p.split('.').reduce((a,k) => a == null ? a : a[k], o);
+function setP(o,p,v){ const ks = p.split('.'); let t = o; ks.slice(0,-1).forEach(k => t = t[k]); t[ks[ks.length-1]] = v; }
+
+// ---------- form builders ----------
+let fid = 0;
+function fld(path, label, o = {}){
+  const id = 'f-' + path.replace(/\./g,'-');
+  const v = getP(state, path);
+  let ctl;
+  if(o.options){
+    ctl = `<select id="${id}" data-k="${path}">${o.options.map(([val,txt]) => `<option value="${esc(val)}"${String(v)===String(val)?' selected':''}>${esc(txt)}</option>`).join('')}</select>`;
+  } else if(o.text){
+    ctl = `<input id="${id}" data-k="${path}" type="text" value="${esc(v ?? '')}">`;
+  } else {
+    ctl = `<input id="${id}" data-k="${path}" type="number" inputmode="decimal" step="${o.step ?? 'any'}" min="${o.min ?? 0}"${o.max!=null?` max="${o.max}"`:''} value="${v ?? 0}">`;
+  }
+  return `<label class="fld"${o.wide?' style="grid-column:1/-1"':''}><span class="lab">${label}</span><span class="ctl">${ctl}${o.suf?`<span class="suf">${o.suf}</span>`:''}</span>${o.hint?`<span class="hint">${o.hint}</span>`:''}</label>`;
+}
+const planOpts = fams => Object.entries(PLANS).filter(([k,p]) => !fams || fams.includes(p.fam)).map(([k,p]) => [k, `${p.name} — $${p.hr}/h${p.mo?` (cap $${p.mo}/mo)`:''}`]);
+const sec = (key, title, tag, body, open = true) => `<details class="sec" data-sec="${key}"${open?' open':''}><summary>${title}${tag?`<span class="tag">${tag}</span>`:''}<span class="sec-total" id="t-${key}"></span></summary><div class="secbody">${body}</div></details>`;
+
+function stageHTML(st, i){
+  const p = `stages.${i}`;
+  let m = '';
+  if(st.method === 'fixed') m = fld(p+'.count','Instances',{step:1,suf:'nodes'}) + fld(p+'.hours','Hours / month',{step:1,suf:'h',hint:'730 = always on'});
+  else if(st.method === 'live') m = fld(p+'.concurrent',`Concurrent ${esc(st.unitLabel||'units')}`,{step:1}) + fld(p+'.perInstance','Capacity per instance',{step:'any',suf:esc(st.unitLabel||'units'),hint:'From your benchmark'}) + fld(p+'.hours','Hours / month',{step:1,suf:'h'}) + fld(p+'.unitLabel','Unit name',{text:true});
+  else m = fld(p+'.units','Work units / month',{step:'any',suf:esc(st.unitLabel||'units')}) + fld(p+'.rate','Units per instance-hour',{step:'any',hint:'Throughput of one instance'}) + fld(p+'.util','Achieved utilization',{step:.05,max:.99,hint:'0.8 = 80%'}) + fld(p+'.unitLabel','Unit name',{text:true});
+  return `<div class="stage"><div class="top">${fld(p+'.label','Stage',{text:true})}${fld(p+'.plan','Plan',{options:planOpts()})}${fld(p+'.method','Sizing method',{options:[['fixed','Fixed fleet'],['live','Live concurrency'],['batch','Batch throughput']]})}<button class="btn ghost" type="button" data-rmstage="${i}" aria-label="Remove stage">Remove</button></div><div class="grid">${m}</div></div>`;
+}
+function customHTML(c, i){
+  const p = `custom.${i}`;
+  return `<div class="grid" style="grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) auto;align-items:end">${fld(p+'.label','Line',{text:true})}${fld(p+'.amount','Amount',{step:'any',suf:'USD'})}${fld(p+'.kind','Timing',{options:[['recurring','Per month'],['onetime','One-time']]})}<button class="btn ghost" type="button" data-rmcustom="${i}">Remove</button></div>`;
+}
+
+function renderForm(){
+  const s = state;
+  const unit = esc(s.unit || 'task');
+  const Unit = unit.charAt(0).toUpperCase() + unit.slice(1);
+  const html = [
+    sec('demand','Demand to model calls','tokens',
+      `<p class="intro">Translate business activity into model calls. One ${unit} can involve several calls (retrieval, tools, retries, judges). Set users to 0 for pure media pipelines with no LLM step.</p>
+       <div class="grid">
+       ${fld('unit','Unit of work',{text:true,hint:'Used for cost per unit'})}
+       ${fld('workload.users','Active users or sources',{step:1})}
+       ${fld('workload.tasksPerDay',`${Unit}s per user per day`,{step:'any'})}
+       ${fld('workload.activeDays','Active days / month',{step:1,max:31})}
+       ${fld('workload.callsPerTask',`Model calls per ${unit}`,{step:'any'})}
+       ${fld('workload.retryPct','Retry and rework overhead',{step:1,suf:'%',hint:'Duplicate work idempotency keys can remove'})}
+       ${fld('workload.inTok','Input tokens per call',{step:1,hint:'System prompt, history, retrieved context, image tokens'})}
+       ${fld('workload.outTok','Output tokens per call',{step:1,hint:'Include reasoning tokens once'})}
+       ${fld('workload.activeHours','Active hours per day',{step:1,max:24})}
+       ${fld('workload.peakFactor','Peak-to-average ratio',{step:.1,min:1,hint:'Busiest hour ÷ average active hour'})}
+       ${fld('workload.mediaHours','Media hours / month',{step:'any',hint:'Denominator for cost per media hour (optional)'})}
+       </div><div class="derived" id="d-demand"></div>`),
+    sec('serve','Model serving on Linode GPUs','vLLM / self-hosted',
+      `<p class="intro">Self-hosted open-weight models on GPU Linodes. Throughput is the aggregate tokens per second one instance sustains under continuous batching. The defaults are assumptions: replace them with your own benchmark.</p>
+       <div class="grid">
+       ${fld('serving.profile','Serving profile',{options:Object.entries(PROFILES).map(([k,p])=>[k,p.label]),wide:true})}
+       ${fld('serving.plan','GPU plan',{options:planOpts(['GPU']),wide:true})}
+       ${fld('serving.prefillTps','Prefill throughput',{step:'any',suf:'tok/s',hint:'Input tokens processed per second'})}
+       ${fld('serving.decodeTps','Decode throughput',{step:'any',suf:'tok/s',hint:'Output tokens generated per second'})}
+       ${fld('serving.utilization','Target utilization',{step:.05,max:.99,hint:'Headroom for latency SLOs'})}
+       ${fld('serving.provisioning','Provisioning',{options:[['always','Always-on, sized for peak'],['elastic','Elastic, pay per instance-hour']]})}
+       ${fld('serving.minReplicas','Minimum replicas',{step:1})}
+       ${fld('serving.hours','Hours on / month',{step:1,max:744,suf:'h'})}
+       ${fld('routing.linodeShare','Calls served on Linode',{step:5,max:100,suf:'%'})}
+       ${fld('api.inRate','External API input rate',{step:'any',suf:'$/M',hint:'Your contracted rate'})}
+       ${fld('api.outRate','External API output rate',{step:'any',suf:'$/M'})}
+       </div><div class="derived" id="d-serve"></div>`),
+    sec('pipe','Pipeline compute','media · ingest · app tier',
+      `<p class="intro">Everything that is not token generation: transcoding on NETINT VPUs, speech-to-text, TTS, embedding, OCR, app tiers. Size each stage as a fixed fleet, by live concurrency, or by batch throughput.</p>
+       ${(s.stages||[]).map(stageHTML).join('') || '<p class="intro">No pipeline stages yet.</p>'}
+       <div class="row-actions"><button class="btn" type="button" data-add="vpu">Add VPU transcode stage</button><button class="btn" type="button" data-add="asr">Add GPU batch stage</button><button class="btn" type="button" data-add="cpu">Add CPU fleet</button></div>`),
+    sec('plat','Platform, storage and data','LKE · storage · databases',
+      `<div class="grid">
+       ${fld('platform.lke','Kubernetes control plane',{options:[['none','None or standard LKE (free)'],['ha','LKE HA control plane'],['enterprise','LKE Enterprise']]})}
+       ${fld('platform.nbBasic','NodeBalancers',{step:1})}
+       ${fld('platform.nbPremium','Premium NodeBalancers',{step:1})}
+       ${fld('platform.nbPremiumGB','Premium NB processed',{step:'any',suf:'GB/mo'})}
+       ${fld('platform.objGB','Object Storage',{step:'any',suf:'GB'})}
+       ${fld('platform.blockGB','Block Storage',{step:'any',suf:'GB'})}
+       ${fld('platform.db','Managed database',{options:Object.entries(DBPLANS).map(([k,d])=>[k,d.name]),wide:true})}
+       ${fld('platform.dbNodes','Database nodes',{options:[['1','1 node'],['2','2 nodes'],['3','3 nodes']]})}
+       ${fld('platform.mgmt','Linode Managed instances',{step:1,hint:'$100 per instance per month'})}
+       </div>`),
+    sec('net','Network','egress',
+      `<div class="grid">${fld('network.egressTB','Outbound transfer',{step:'any',suf:'TB/mo',hint:'Public egress, including origin traffic to a CDN. Private VPC/VLAN traffic is free.'})}</div><div class="derived" id="d-net"></div>`),
+    sec('people','People, services and budget','',
+      `${(s.custom||[]).map(customHTML).join('')}
+       <div class="row-actions"><button class="btn" type="button" data-addcustom="1">Add cost line</button></div>
+       <div class="grid">${fld('finance.reservePct','Planning reserve',{step:1,suf:'%'})}${fld('finance.horizon','Horizon',{step:1,suf:'months'})}</div>`)
+  ].join('');
+  $('#form').innerHTML = html;
+  $('#f-name').value = s.name || '';
+  $('#preset').value = presetId;
+  recalc();
+}
+
+// ---------- results ----------
+function recalc(){
+  const r = calc(state);
+  persist();
+  const unit = esc(state.unit || 'task');
+  document.querySelectorAll('[data-route]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.route === +state.routing.linodeShare)));
+  const linodeShare = +state.routing.linodeShare || 0;
+
+  // section totals
+  const sum = f => r.lines.filter(f).reduce((a,l) => a + l.monthly, 0);
+  const setT = (k,v) => { const e = $('#t-'+k); if(e) e.textContent = v ? money(v)+'/mo' : ''; };
+  setT('serve', r.servingCost + r.apiCost); setT('pipe', sum(l => l.layer==='Pipeline compute'));
+  setT('plat', sum(l => l.layer==='Platform & data')); setT('net', r.egressCost);
+  setT('people', sum(l => l.layer==='Services & people' && l.kind!=='onetime'));
+
+  const dd = $('#d-demand');
+  if(dd) dd.innerHTML = `<span>${unit.charAt(0).toUpperCase()+unit.slice(1)}s / month <b>${compact(r.tasks)}</b></span><span>Model calls <b>${compact(r.calls)}</b></span><span>Input tokens <b>${compact(r.inM*1e6)}</b></span><span>Output tokens <b>${compact(r.outM*1e6)}</b></span>`;
+  const ds = $('#d-serve');
+  if(ds) ds.innerHTML = r.lCalls > 0
+    ? `<span>GPU-seconds per call <b>${r.gpuSec.toFixed(3)}</b></span><span>Peak load <b>${r.peakCps.toFixed(2)} calls/s</b></span><span>Busy GPU-hours <b>${qty(r.busyHrs)}</b></span><span>${state.serving.provisioning==='always'?'Instances':'Instance-months'} <b>${qty(r.inst)}</b></span><span>Monthly busy <b>${r.instHours?Math.round(r.busyHrs/r.instHours*100):0}%</b></span>`
+    : `<span>No calls routed to Linode GPUs.</span>`;
+  const dn = $('#d-net');
+  if(dn) dn.innerHTML = `<span>Pooled allowance <b>${r.poolTB.toFixed(2)} TB</b></span><span>Billable <b>${qty(r.billableGB)} GB</b></span><span>Rate <b>$0.005/GB</b></span>`;
+
+  // meter
+  const layers = LAYERS.map(([n,v]) => [n, v, r.byLayer[n] || 0]).filter(x => x[2] > 0);
+  const tot = r.opex || 1;
+  const verdict = r.calls > 0 ? (() => {
+    const linodeAll = r.lCalls > 0 ? r.servingCost / (linodeShare/100 || 1) : null;
+    return `<div class="card"><h3>Model economics</h3><div class="compare">
+      <div class="cmp-row"><span>Model cost in this scenario</span><span class="mono">${money(r.modelCost)}</span></div>
+      <div class="bar2"><span style="width:${Math.min(100, r.modelCost/Math.max(r.modelCost, r.allExternal)*100)}%;background:var(--l-serve)"></span></div>
+      <div class="cmp-row"><span>Same calls, all on the external API</span><span class="mono">${money(r.allExternal)}</span></div>
+      <div class="bar2"><span style="width:${Math.min(100, r.allExternal/Math.max(r.modelCost, r.allExternal)*100)}%;background:var(--l-api)"></span></div>
+      ${r.linodeTokM > 0 ? `<div class="cmp-row"><span>Effective Linode rate (input + output)</span><span class="mono">${money(r.linodePerM)}/M tok</span></div>` : ''}
+      <div>${r.modelCost < r.allExternal ? `<span class="chip good">Saves ${money(r.allExternal - r.modelCost)}/mo vs all-external</span>` : `<span class="chip warn">Costs ${money(r.modelCost - r.allExternal)}/mo more than all-external</span>`} <span class="chip info">Model is ${Math.round(r.modelShare*100)}% of operating cost</span></div>
+    </div></div>`;
+  })() : '';
+  $('#meter').innerHTML = `
+    <div class="card kpi-main">
+      <div class="eyebrow">Monthly planning budget</div>
+      <div class="big">${money(r.budget)}</div>
+      <div class="sub">${money(r.opex)} operating cost + ${state.finance.reservePct || 0}% reserve</div>
+      <dl class="kpis">
+        <div><dt>Upfront cash</dt><dd>${money(r.upfront)}</dd></div>
+        <div><dt>Year 1 cash</dt><dd>${money(r.year1)}</dd></div>
+        <div><dt>${state.finance.horizon || 0}-month cash</dt><dd>${money(r.horizon)}</dd></div>
+        <div><dt>Cost per ${unit}</dt><dd>${r.tasks > 0 ? money(r.perTask) : '—'}</dd></div>
+        ${r.perMediaHour ? `<div style="grid-column:1/-1"><dt>Cost per media hour</dt><dd>${money(r.perMediaHour)}</dd></div>` : ''}
+      </dl>
+    </div>
+    <div class="card"><h3>Where the money goes</h3>
+      <div class="stack" role="img" aria-label="Monthly cost by layer">${layers.map(([n,v,a]) => `<span style="width:${a/tot*100}%;background:var(${v})" title="${esc(n)}"></span>`).join('')}</div>
+      <ul class="legend">${layers.map(([n,v,a]) => `<li><i style="background:var(${v})"></i><span>${esc(n)}</span><span class="amt">${money(a)}</span><span class="pct">${Math.round(a/tot*100)}%</span></li>`).join('') || '<li><span></span><span>Nothing priced yet</span></li>'}</ul>
+    </div>
+    ${verdict}
+    ${r.warn.length ? `<div class="card"><h3>Check these assumptions</h3><ul class="warns">${r.warn.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>` : ''}`;
+
+  // audit
+  const rows = r.lines.map(l => {
+    const src = SRC[l.src];
+    const link = src && src.u ? `<a href="${src.u}" target="_blank" rel="noopener">${esc(src.t)}</a>` : esc(src ? src.t : '');
+    return `<tr><td><span class="layerdot" style="background:var(${layerVar(l.layer)})"></span>${esc(l.layer)}</td><td>${esc(l.item)}${l.note?`<span class="note">${esc(l.note)}</span>`:''}</td><td class="r num">${qty(l.qty)}</td><td>${esc(l.unit)}</td><td class="r num">${l.rate < 1 && l.rate > 0 ? '$'+(+l.rate.toFixed(4)) : money(l.rate)}</td><td class="r num">${money(l.monthly)}${l.kind==='onetime'?' <small>once</small>':''}</td><td>${link}</td></tr>`;
+  }).join('');
+  $('#audit').innerHTML = `<table><thead><tr><th>Layer</th><th>Line</th><th class="r">Qty</th><th>Unit</th><th class="r">Rate</th><th class="r">Monthly</th><th>Source</th></tr></thead><tbody>${rows}
+    <tr class="total"><td></td><td>Monthly operating cost</td><td></td><td></td><td></td><td class="r num">${money(r.opex)}</td><td></td></tr></tbody></table>`;
+  window.__last = r;
+}
+
+// ---------- events ----------
+document.addEventListener('input', e => {
+  const k = e.target.dataset && e.target.dataset.k;
+  if(!k) return;
+  const isText = e.target.type === 'text';
+  let v = isText ? e.target.value : e.target.tagName === 'SELECT' ? e.target.value : parseFloat(e.target.value);
+  if(!isText && e.target.tagName !== 'SELECT' && !isFinite(v)) v = 0;
+  if(k === 'platform.dbNodes') v = +v;
+  setP(state, k, v);
+  if(k === 'serving.profile' && PROFILES[v] && PROFILES[v].plan){
+    Object.assign(state.serving, {plan: PROFILES[v].plan, prefillTps: PROFILES[v].prefillTps, decodeTps: PROFILES[v].decodeTps});
+    renderForm(); return;
+  }
+  if(['serving.plan','serving.prefillTps','serving.decodeTps'].includes(k)){ state.serving.profile = 'custom'; const p = $('#f-serving-profile'); if(p) p.value = 'custom'; }
+  if(/^stages\.\d+\.method$/.test(k)){
+    const st = getP(state, k.replace('.method',''));
+    st.count ??= 1; st.hours ??= 730; st.concurrent ??= 10; st.perInstance ??= 10; st.units ??= 1000; st.rate ??= 20; st.util ??= .8; st.unitLabel ??= 'units';
+    renderForm(); return;
+  }
+  if(k === 'unit' || /unitLabel$/.test(k)){ recalc(); return; }
+  recalc();
+});
+document.addEventListener('click', e => {
+  const t = e.target.closest('button'); if(!t) return;
+  if(t.dataset.route != null){ state.routing.linodeShare = +t.dataset.route; renderForm(); }
+  else if(t.dataset.rmstage != null){ state.stages.splice(+t.dataset.rmstage,1); renderForm(); }
+  else if(t.dataset.rmcustom != null){ state.custom.splice(+t.dataset.rmcustom,1); renderForm(); }
+  else if(t.dataset.addcustom){ state.custom.push({label:'New cost line',amount:0,kind:'recurring'}); renderForm(); }
+  else if(t.dataset.add){
+    const n = {vpu:{label:'Transcode ladder',plan:'vpu-1s',method:'batch',units:1000,rate:16,unitLabel:'content hours',util:.8},
+               asr:{label:'GPU batch stage (ASR / embedding)',plan:'ada-1m',method:'batch',units:1000,rate:25,unitLabel:'content hours',util:.8},
+               cpu:{label:'App tier',plan:'g8-8x4',method:'fixed',count:2,hours:730}}[t.dataset.add];
+    state.stages.push(n); renderForm();
+  }
+  else if(t.dataset.load){ loadPreset(t.dataset.load); renderForm(); go('planner'); window.scrollTo(0,0); }
+  else if(t.dataset.f){ document.querySelectorAll('[data-f]').forEach(b => b.setAttribute('aria-pressed', String(b===t))); document.querySelectorAll('.uc').forEach(c => c.hidden = !(t.dataset.f==='all' || c.dataset.group===t.dataset.f)); }
+});
+$('#preset').addEventListener('change', e => { loadPreset(e.target.value); renderForm(); });
+$('#f-name').addEventListener('input', e => { state.name = e.target.value; persist(); });
+
+function say(m){ const t = $('#toast'); t.textContent = m; clearTimeout(say.t); say.t = setTimeout(() => t.textContent = '', 3500); }
+function copy(txt, label){
+  const io = $('#io'); io.value = txt;
+  const done = () => say(label + ' copied');
+  const fail = () => { io.focus(); io.select(); say('Copy blocked here: the text is selected in the box, copy it manually'); };
+  try{ navigator.clipboard.writeText(txt).then(done, fail); }catch(err){ fail(); }
+}
+$('#b-json').addEventListener('click', () => copy(JSON.stringify(Object.assign({schema:'linode-ai-media-planner/1', pricesAsOf:PRICES_ASOF}, state), null, 2), 'Scenario JSON'));
+$('#b-csv').addEventListener('click', () => {
+  const r = calc(state);
+  const q = v => `"${String(v).replace(/"/g,'""')}"`;
+  const out = [['layer','line','quantity','unit','rate_usd','monthly_usd','timing','source','note'].join(',')]
+    .concat(r.lines.map(l => [l.layer,l.item,+l.qty.toFixed(4),l.unit,l.rate,+l.monthly.toFixed(2),l.kind,(SRC[l.src]||{}).u||'your assumption',l.note].map(q).join(',')))
+    .concat([q('Total')+',,,,,'+r.opex.toFixed(2)+',recurring,,', q('Monthly planning budget')+',,,,,'+r.budget.toFixed(2)+',,,', q('Year 1 cash')+',,,,,'+r.year1.toFixed(2)+',,,']);
+  copy(out.join('\n'), 'Audit CSV');
+});
+$('#b-load').addEventListener('click', () => {
+  try{
+    const o = JSON.parse($('#io').value);
+    if(!o.workload || !o.serving) throw new Error('missing workload or serving block');
+    state = Object.assign(base(), o); presetId = o.useCase || presetId; renderForm(); say('Scenario loaded');
+  }catch(err){ say('Could not load: ' + err.message + '. Paste JSON produced by “Copy scenario JSON”.'); }
+});
+$('#b-reset').addEventListener('click', () => { loadPreset(presetId); renderForm(); say('Reset to the use-case defaults'); });
+
+// ---------- static views ----------
+$('#asof').textContent = PRICES_ASOF;
+$('#preset').innerHTML = ['AI','Media'].map(g => `<optgroup label="${g==='AI'?'AI workloads':'Media AI'}">${USE_CASES.filter(u=>u.group===g).map(u=>`<option value="${u.id}">${esc(u.title)}</option>`).join('')}</optgroup>`).join('');
+
+$('#lib').innerHTML = USE_CASES.map(u => {
+  const r = calc(u.s());
+  return `<article class="uc" data-group="${u.group}">
+    <div class="meta"><span class="chip ${u.group==='Media'?'media':'info'}">${u.group==='Media'?'Media AI':'AI workload'}</span><span class="chip" style="background:var(--sunk);color:var(--muted)">${esc(u.unitMetric)}</span></div>
+    <h3>${esc(u.title)}</h3><p>${esc(u.summary)}</p>
+    <dl>
+      <div><dt>Cost drivers</dt><dd><ul>${u.drivers.map(d=>`<li>${esc(d)}</li>`).join('')}</ul></dd></div>
+      <div><dt>Linode building blocks</dt><dd>${esc(u.blocks.join(' · '))}</dd></div>
+      <div><dt>Watch out</dt><dd>${esc(u.watch)}</dd></div>
+      <div><dt>Retry safety (idempotency key)</dt><dd>${esc(u.idem)}</dd></div>
+    </dl>
+    <div class="foot"><span class="est">${money(r.budget)}<small>illustrative monthly budget</small></span><button class="btn primary" type="button" data-load="${u.id}">Open in planner</button></div>
+  </article>`;
+}).join('');
+
+const P = PLANS;
+$('#methodbody').innerHTML = `
+<h2>How costing works</h2>
+<div class="analogy"><strong>Taxi meter or leased van.</strong> An external model API is a taxi: you pay per kilometre (token) and nothing while parked. A GPU Linode is a leased van: you pay by the hour whether it carries one parcel or a full load. The van wins when you keep it full. Utilization is how full the van is, and peak sizing is how many vans you need for the busiest hour of the day.</div>
+<p>Business demand becomes model calls, calls become tokens, and every supporting service is priced in its own billing unit. On Linode, model cost is not a per-token meter. It is GPU instance-hours, derived from how fast one instance processes tokens.</p>
+<h3>1. Demand to calls</h3>
+<pre>Units per month   = users × units per user per day × active days
+Model calls       = units × calls per unit × (1 + retry %)
+Linode calls      = model calls × Linode share
+External calls    = model calls − Linode calls</pre>
+<h3>2. GPU time per call</h3>
+<pre>GPU-seconds/call  = input tokens ÷ prefill tok/s + output tokens ÷ decode tok/s
+Busy GPU-hours    = Linode calls × GPU-seconds/call ÷ 3600</pre>
+<p>Prefill and decode throughput are aggregate figures for one instance under continuous batching (vLLM, TensorRT-LLM, SGLang). They depend on the model, quantization, context length and concurrency, so measure them on the plan you intend to buy. Akamai’s own test of an RTX PRO 6000 Blackwell reported about 3,030 tokens per second at 100 concurrent requests with 200 input and 200 output tokens (<a href="${SRC.bench.u}" target="_blank" rel="noopener">source</a>). The RTX 4000 Ada defaults are assumptions to replace.</p>
+<h3>3. Instances</h3>
+<pre>Peak calls/s      = Linode calls ÷ (active days × active hours × 3600) × peak ratio
+Always-on         = max(min replicas, ceil(peak calls/s × GPU-s/call ÷ target utilization)) × hours × $/h
+Elastic           = max(busy GPU-hours ÷ utilization, min replicas × hours) × $/h</pre>
+<p>Akamai bills hourly and rounds up to the nearest hour per service (<a href="${SRC.svc.u}" target="_blank" rel="noopener">billing FAQ</a>), so a real autoscaler that starts and stops instances often costs a little more than the elastic estimate. Where the price page lists a monthly price (VPU, G7, shared plans), the planner caps an instance at that amount.</p>
+<h3>4. Pipeline stages</h3>
+<pre>Fixed fleet       = instances × hours × $/h (capped at the monthly price)
+Live concurrency  = ceil(concurrent units ÷ units per instance) × hours × $/h
+Batch throughput  = work units ÷ units per instance-hour ÷ utilization × $/h</pre>
+<p>Use stages for media work that is not measured in tokens: ABR transcoding on NETINT Quadra T1U VPUs (rated at 32× 1080p30 per VPU, <a href="${SRC.vpuSpec.u}" target="_blank" rel="noopener">source</a>), live or batch speech-to-text, TTS, shot embedding, OCR and application tiers. RTX 4000 Ada cards also carry two NVENC, two NVDEC and an AV1 engine (<a href="${SRC.gpuMedia.u}" target="_blank" rel="noopener">source</a>), which makes them a GPU option for transcoding next to AI inference.</p>
+<h3>5. Network transfer</h3>
+<pre>Pool (TB)         = Σ bundled transfer of older plans (prorated by hours) + 1 TB if Object Storage is enabled
+Billable GB       = max(0, outbound GB − pool) ; cost = billable GB × $0.005</pre>
+<p>GPU, Accelerated and G8 Dedicated plans include no transfer, while G6, G7, shared and high-memory plans add an allowance to a global pool. Inbound traffic and private VPC or VLAN traffic are free (<a href="${SRC.xfer.u}" target="_blank" rel="noopener">TechDocs</a>). Jakarta, São Paulo and distributed regions use separate pools and different rates; this planner uses the core-region rate.</p>
+<h3>6. Budgets</h3>
+<pre>Monthly operating cost  = Σ recurring lines
+Monthly planning budget = operating cost × (1 + reserve %)
+Year 1 cash             = one-time lines + 12 × planning budget
+Horizon cash            = one-time lines + horizon months × planning budget
+Cost per unit           = operating cost ÷ units per month (before reserve)</pre>
+<h3>Retries are a cost line</h3>
+<p>Every duplicate job is billed GPU or VPU time. The retry field shows the cost of rework; idempotency keys are how you reduce it. Each library entry names a key, where it is stored, how long it lives and what a duplicate request receives. The general pattern: derive the key from the business identity plus a version (asset_id + rendition profile + model version), store it with a unique constraint or a Valkey SET NX, keep it at least as long as your queue’s redelivery window, and return the first result for any duplicate.</p>
+<h3>What this planner does not do</h3>
+<ul>
+<li>It does not connect to your Akamai account, read invoices or refresh prices. The price book is a dated snapshot.</li>
+<li>It does not validate that a model fits in VRAM or meets latency targets. Benchmark before committing.</li>
+<li>It excludes CDN delivery, security products, taxes, committed-use discounts and support contracts. Add them as custom lines when in scope.</li>
+<li>Regional price differences (GPU and some services vary by region) are not modeled.</li>
+</ul>
+<h3>Run it yourself</h3>
+<p>The planner is a single self-contained HTML file with no build step and no server logic, so any static host works: a Nanode with a web server, an Object Storage bucket, or a bucket fronted by the Akamai CDN.</p>`;
+
+const fam = f => Object.values(P).filter(p => p.fam === f);
+const ptable = (title, rows, src) => `<div class="card"><div class="shrow"><h3>${title}</h3><a href="${SRC[src].u}" target="_blank" rel="noopener">${esc(SRC[src].t)}</a></div><div class="tablewrap"><table><thead><tr><th>Plan</th><th>Shape</th><th class="r">$/hour</th><th class="r">Monthly cap</th><th class="r">Bundled transfer</th></tr></thead><tbody>${rows.map(p => `<tr><td>${esc(p.name)}</td><td>${esc(p.spec)}</td><td class="r num">$${p.hr}</td><td class="r num">${p.mo?'$'+p.mo:'—'}</td><td class="r num">${p.tb} TB</td></tr>`).join('')}</tbody></table></div></div>`;
+$('#pricebody').innerHTML = `
+  <div class="card"><h3>About this price book</h3><p class="intro">Snapshot of Akamai Cloud list prices taken ${PRICES_ASOF} for core regions, USD, before tax. Plans without a monthly cap on the official page are priced as hourly rate × hours. Akamai’s GPU documentation also mentions a $350/month figure for RTX 4000 Ada x1 Small while the pricing page lists only $0.52/hour; this planner uses the hourly rate, so an always-on RTX 4000 Ada x1 Small shows as $379.60 here. Confirm current prices and regional variation before quoting.</p></div>
+  ${ptable('GPU plans', fam('GPU'), 'gpu')}
+  ${ptable('Accelerated Compute (NETINT VPU)', fam('VPU'), 'vpu')}
+  ${ptable('CPU plans used in presets', fam('CPU'), 'cpu')}
+  <div class="card"><div class="shrow"><h3>Platform, storage, network</h3></div><div class="tablewrap"><table><thead><tr><th>Item</th><th>Price</th><th>Source</th></tr></thead><tbody>
+    <tr><td>LKE standard control plane</td><td>No charge</td><td><a href="${SRC.lke.u}" target="_blank" rel="noopener">LKE pricing</a></td></tr>
+    <tr><td>LKE HA control plane</td><td class="num">from $60 / cluster / month</td><td><a href="${SRC.lke.u}" target="_blank" rel="noopener">LKE pricing</a></td></tr>
+    <tr><td>LKE Enterprise</td><td class="num">$300 / cluster / month</td><td><a href="${SRC.lke.u}" target="_blank" rel="noopener">LKE pricing</a></td></tr>
+    <tr><td>NodeBalancer</td><td class="num">$10 / month, no data processing charge</td><td><a href="${SRC.nb.u}" target="_blank" rel="noopener">NodeBalancer pricing</a></td></tr>
+    <tr><td>Premium NodeBalancer</td><td class="num">$0.225 / hour + $0.005 / GB processed</td><td><a href="${SRC.nb.u}" target="_blank" rel="noopener">NodeBalancer pricing</a></td></tr>
+    <tr><td>Object Storage</td><td class="num">$5 / month incl. 250 GB, then $0.02 / GB; +1 TB transfer pool</td><td><a href="${SRC.obj.u}" target="_blank" rel="noopener">Object Storage pricing</a></td></tr>
+    <tr><td>Block Storage</td><td class="num">$0.10 / GB / month</td><td><a href="${SRC.block.u}" target="_blank" rel="noopener">Block Storage</a></td></tr>
+    <tr><td>Outbound transfer overage</td><td class="num">$0.005 / GB (core regions)</td><td><a href="${SRC.xfer.u}" target="_blank" rel="noopener">Network transfer</a></td></tr>
+    <tr><td>Linode Managed</td><td class="num">$100 / instance / month</td><td><a href="${SRC.svc.u}" target="_blank" rel="noopener">Pricing overview</a></td></tr>
+  </tbody></table></div></div>
+  <div class="card"><div class="shrow"><h3>Managed databases</h3><a href="${SRC.db.u}" target="_blank" rel="noopener">${esc(SRC.db.t)}</a></div><div class="tablewrap"><table><thead><tr><th>Plan</th><th class="r">1 node</th><th class="r">2 nodes</th><th class="r">3 nodes</th></tr></thead><tbody>${Object.entries(DBPLANS).filter(([k])=>k!=='none').map(([k,d]) => `<tr><td>${esc(d.name)}</td>${[1,2,3].map(n => `<td class="r num">${d.p[n]!=null?'$'+d.p[n].toLocaleString('en-US',{minimumFractionDigits:2}):'—'}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+
+// ---------- views ----------
+const VIEWS = ['planner','library','method','prices'];
+function go(v){
+  if(!VIEWS.includes(v)) v = 'planner';
+  VIEWS.forEach(x => { $('#v-'+x).hidden = x !== v; });
+  document.querySelectorAll('nav.tabs a').forEach(a => a.setAttribute('aria-current', a.dataset.view === v ? 'page' : 'false'));
+}
+window.addEventListener('hashchange', () => go(location.hash.slice(1)));
+go(location.hash.slice(1));
+renderForm();
+})();
+</script>

@@ -14,6 +14,7 @@ Single-page demo application showcasing Akamai's media delivery stack — from e
 | **Virtual Channels** | Virtual channel creation with Unified Streaming — architecture and EPG views |
 | **MCAP** | Multi-CDN Anti-Piracy — token auth, abuse detection, and revocation |
 | **Analytics** | MediaMelon SDK integration with embeddable dashboard |
+| **Cloud Calculator** | Link to the AI & Media cost planner on `cloudcalculator.fde-demo.com` (see below) |
 
 ## Cloudinary Site
 
@@ -21,6 +22,27 @@ Cloudinary lives on its own subdomain (`cloudinary.fde-demo.com`) rather than
 as a tab — a searchable, filterable catalog of 36 Cloudinary demos plus
 capabilities, URL transformation examples, and SDK integration. Built from the
 same codebase via a second Vite entry point (`cloudinary.html`).
+
+## Cloud Calculator Site
+
+The **Cloud Calculator** tab links to `cloudcalculator.fde-demo.com`, which
+serves the Linode AI & Media Cost Planner: a self-contained page that estimates
+monthly and first-year cost for AI and Media AI workloads on Akamai Cloud.
+
+| Path | What it is |
+|------|------------|
+| `tools/cloud-calculator/src/` | Source of truth: `src.html` (UI), `engine.js` (cost engine and price book), `presets.js` (use-case library) |
+| `tools/cloud-calculator/build.mjs` | Inlines engine and presets into one HTML document |
+| `tools/cloud-calculator/test/engine.test.mjs` | Engine checks pinned to hand-calculated figures |
+| `public/cloud-calculator/index.html` | Generated (git-ignored); copied by Vite to `dist/cloud-calculator/index.html` |
+
+`npm run build` and `npm run dev` regenerate the page automatically
+(`npm run build:calculator` does it on its own). `npm test` runs the engine
+checks. Do not edit the generated file; change `tools/cloud-calculator/src/`
+and rebuild. Set `MAIN_SITE_URL` when building to change the planner's
+"Back to Media Solutions" link (default `https://mediademo.fde-demo.com/`).
+Price updates go in `engine.js` (`PRICES_ASOF` plus the numbers), with the
+test figures updated to match, in their own PR.
 
 ## Getting Started
 
@@ -155,9 +177,40 @@ VITE_MAIN_SITE_URL=https://mediademo.fde-demo.com
 VITE_CLOUDINARY_SITE_URL=https://cloudinary.fde-demo.com
 ```
 
+### Cloud Calculator subdomain
+
+The planner builds to `dist/cloud-calculator/index.html`, a single file with
+no other assets (it loads only Google Fonts). Point a vhost at that
+directory. HTML is not matched by the long-cache rule, so price refreshes show
+up on the next request.
+
+```bash
+cat > /etc/nginx/sites-available/cloudcalculator <<'NGINX'
+server {
+    listen 80;
+    server_name cloudcalculator.fde-demo.com;
+    root /var/www/mediademo/cloud-calculator;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+NGINX
+
+ln -sf /etc/nginx/sites-available/cloudcalculator /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
+```
+
+Point a DNS `A` record for `cloudcalculator.fde-demo.com` at the Linode IP
+before requesting a certificate. If you add a Content-Security-Policy, this
+vhost needs `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
+`font-src https://fonts.gstatic.com`, and `script-src 'unsafe-inline'`.
+
 ### Optional: HTTPS with Let's Encrypt
 
 ```bash
 apt-get install -y certbot python3-certbot-nginx
 certbot --nginx -d mediademo.fde-demo.com
+certbot --nginx -d cloudcalculator.fde-demo.com
 ```

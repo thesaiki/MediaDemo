@@ -24,6 +24,12 @@ const TABS = [
   { id: 'analytics', label: 'Analytics' },
 ] as const
 
+const CLOUD_CALCULATOR_SITE_URL = import.meta.env.VITE_CLOUD_CALCULATOR_SITE_URL || 'https://cloudcalculator.fde-demo.com'
+
+const TAB_LINKS = [
+  { label: 'Cloud Calculator', href: CLOUD_CALCULATOR_SITE_URL },
+]
+
 function getTabFromHash(): number {
   const hash = window.location.hash.replace('#', '')
   const idx = TABS.findIndex(t => t.id === hash)
@@ -63,7 +69,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <TabBar tabs={TABS.map(t => t.label)} activeTab={activeTab} onTabChange={handleTabChange} />
+      <TabBar tabs={TABS.map(t => t.label)} activeTab={activeTab} onTabChange={handleTabChange} links={TAB_LINKS} />
       <main className="max-w-7xl mx-auto px-4 py-6">
         {renderTab()}
       </main>

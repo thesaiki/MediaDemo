@@ -4,9 +4,12 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "predev": "npm run build:calculator",
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "build:calculator": "node tools/cloud-calculator/build.mjs public/cloud-calculator/index.html",
+    "build": "npm run build:calculator && tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "node tools/cloud-calculator/test/engine.test.mjs"
   },
   "dependencies": {
     "react": "^19.2.7",
