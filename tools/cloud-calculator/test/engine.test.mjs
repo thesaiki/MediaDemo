@@ -1,5 +1,5 @@
 // Pins the cost engine to hand-checked figures. Run: node test/engine.test.mjs
-// Loads engine.js and presets.js the same way the browser does (as plain scripts),
+// Loads prices.json, engine.js and presets.js the same way the browser does (as plain scripts),
 // so it does not depend on the host repo's module settings.
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
@@ -11,7 +11,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 const src = f => readFileSync(resolve(here, '..', 'src', f), 'utf8');
 const ctx = { module: undefined };
 vm.createContext(ctx);
-vm.runInContext(src('engine.js') + '\n' + src('presets.js') + '\n;globalThis.__api = { calc, USE_CASES, PLANS };', ctx);
+const book = `const PRICE_BOOK = ${src('prices.json')};\n`;
+vm.runInContext(book + src('engine.js') + '\n' + src('presets.js') + '\n;globalThis.__api = { calc, USE_CASES, PLANS };', ctx);
 const { calc, USE_CASES, PLANS } = ctx.__api;
 const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 0.01, `${msg}: expected ${b}, got ${a}`);
 const byId = id => USE_CASES.find(u => u.id === id).s();

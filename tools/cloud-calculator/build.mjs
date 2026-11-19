@@ -1,4 +1,5 @@
-// Builds the Cloud Calculator into one self-contained HTML document.
+// Builds the Cloud Calculator into one self-contained HTML document
+// (prices.json, engine.js and presets.js are inlined into src.html).
 // Usage: node build.mjs [output-path]   (default: dist/cloud-calculator.html)
 // MAIN_SITE_URL overrides the "Back to Media Solutions" link target.
 // No dependencies. Works whether or not the host repo uses "type": "module".
@@ -10,7 +11,12 @@ const here = dirname(fileURLToPath(import.meta.url));
 const read = f => readFileSync(resolve(here, 'src', f), 'utf8');
 const out = resolve(process.argv[2] || resolve(here, 'dist', 'cloud-calculator.html'));
 
+// prices.json is parsed (so a broken file fails the build) and injected as PRICE_BOOK.
+// "<" is escaped so no price text can close the inline <script>.
+const priceBook = JSON.stringify(JSON.parse(read('prices.json'))).replace(/</g, '\\u003c');
+
 let body = read('src.html')
+  .replace('/*PRICES*/', () => `const PRICE_BOOK = ${priceBook};`)
   .replace('/*ENGINE*/', () => read('engine.js'))
   .replace('/*PRESETS*/', () => read('presets.js'))
   // Artifact-only hint; meaningless on the public site.

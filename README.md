@@ -31,18 +31,84 @@ monthly and first-year cost for AI and Media AI workloads on Akamai Cloud.
 
 | Path | What it is |
 |------|------------|
-| `tools/cloud-calculator/src/` | Source of truth: `src.html` (UI), `engine.js` (cost engine and price book), `presets.js` (use-case library) |
-| `tools/cloud-calculator/build.mjs` | Inlines engine and presets into one HTML document |
-| `tools/cloud-calculator/test/engine.test.mjs` | Engine checks pinned to hand-calculated figures |
+| `tools/cloud-calculator/src/` | Source of truth: `src.html` (UI), `engine.js` (cost engine), `prices.json` (price book and change log), `presets.js` (use-case library) |
+| `tools/cloud-calculator/build.mjs` | Inlines prices, engine and presets into one HTML document |
+| `tools/cloud-calculator/sync/sync-prices.mjs` | Refreshes `prices.json` from the public pricing API (logic in `sync/diff.mjs`, mapping in `sync/mapping.json`) |
+| `tools/cloud-calculator/test/` | `engine.test.mjs` pins hand-calculated figures; `sync.test.mjs` checks the sync against saved API fixtures |
+| `.github/workflows/cloud-prices.yml` | Daily price sync, commit and deploy |
 | `public/cloud-calculator/index.html` | Generated (git-ignored); copied by Vite to `dist/cloud-calculator/index.html` |
 
 `npm run build` and `npm run dev` regenerate the page automatically
 (`npm run build:calculator` does it on its own). `npm test` runs the engine
-checks. Do not edit the generated file; change `tools/cloud-calculator/src/`
+and sync checks. Do not edit the generated file; change `tools/cloud-calculator/src/`
 and rebuild. Set `MAIN_SITE_URL` when building to change the planner's
 "Back to Media Solutions" link (default `https://mediademo.fde-demo.com/`).
-Price updates go in `engine.js` (`PRICES_ASOF` plus the numbers), with the
-test figures updated to match, in their own PR.
+
+### Price sync
+
+Prices live in `tools/cloud-calculator/src/prices.json`, which the build
+injects as `PRICE_BOOK` ahead of `engine.js`. It holds `asOf` (date of the
+last change), `plans`, `dbPlans`, `rates` and `changes` (newest first; the
+Price book tab shows the latest 20 rows). Every entry has `sync`:
+
+- `api`: refreshed from the unauthenticated Akamai Cloud (Linode) API
+  (`linode/types`, `databases/types`, `lke/types`, `nodebalancers/types`,
+  `object-storage/types`, `network-transfer/prices`, `volumes/types`). Plans
+  and database plans carry their `apiId`; rate mappings are in
+  `sync/mapping.json`. Base prices only; regional surcharges are not modeled.
+- `manual`: not in the API, kept by hand and marked "manual" on the Price
+  book tab. Today: RTX PRO 6000 Blackwell (`bw-*`), `objIncludedGB`,
+  `nbPremiumPerGB` and `managedPerInstance`.
+
+The sync diffs every mapped value, applies changes, adds new plans the API
+lists in covered families (GPU, VPU, G8, G7, shared, high memory; keyed by
+API id), flags API ids that disappear with `missingSince` instead of deleting
+them, and appends one `changes` entry only when something changed. A run with
+no changes leaves the file untouched. It writes nothing and exits 1 if a
+request fails or returns malformed data, if more than 20% of mapped items are
+missing, or if any price moves by more than ±50% (`--allow-large` accepts a
+real large move).
+
+Run it by hand:
+
+```bash
+node tools/cloud-calculator/sync/sync-prices.mjs --dry-run   # show the delta only
+node tools/cloud-calculator/sync/sync-prices.mjs             # update prices.json
+npm test && npm run build:calculator
+```
+
+Other options: `--summary <file>` (Markdown delta), `--fixtures <dir>` (read
+saved responses instead of the API), `--date YYYY-MM-DD`.
+
+To change a manual item, edit its value in `prices.json` and commit it. To
+take an API-synced item over by hand, set its `sync` to `"manual"` (and add a
+`note`); the sync then leaves it alone. To stop a new API plan from being
+added, put its id in `ignoreIds` in `sync/mapping.json`. A plan's `name`,
+`spec` and `line` can be edited freely; only `hr`, `mo` and `tb` are synced.
+Presets reference plan keys, so never rename a key that a preset uses.
+
+**Schedule.** `.github/workflows/cloud-prices.yml` runs daily at 11:00
+America/New_York (cron at 15:00 and 16:00 UTC; a first step keeps the one
+that is 11:00 local, so it holds across daylight saving) and on manual
+dispatch (Actions, "Cloud calculator prices", Run workflow, which skips the
+time gate). When prices changed it runs `npm test`, builds only the
+calculator page, commits `prices.json` to `main` as
+`chore(akamai): sync cloud prices YYYY-MM-DD`, uploads the page with rsync
+over SSH to `cloud-calculator/index.html` and opens an issue with the
+summary. When a guard trips it opens an issue with the output and deploys
+nothing.
+
+Repository secrets the workflow needs:
+
+| Secret | Value |
+|--------|-------|
+| `DEPLOY_SSH_KEY` | Private key for the `deploy` user. Restrict it on the server with `rrsync` rooted at `/var/www/mediademo` (for example `command="rrsync /var/www/mediademo",restrict ssh-ed25519 ...` in `authorized_keys`), which is why the remote path is relative |
+| `DEPLOY_KNOWN_HOSTS` | The server's host key line(s), from `ssh-keyscan <host>` checked against the server |
+| `DEPLOY_HOST` | Host name or IP of the web server |
+
+The workflow pushes to `main` with the default `GITHUB_TOKEN`; if `main` is
+protected, allow GitHub Actions to push or the commit step will fail (and
+nothing is deployed).
 
 ## Getting Started
 

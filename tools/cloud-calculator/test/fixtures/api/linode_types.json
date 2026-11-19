@@ -1,0 +1,135 @@
+{
+  "data": [
+    {
+      "id": "g2-gpu-rtx4000a1-m",
+      "label": "RTX4000 Ada x1 Medium",
+      "price": {
+        "hourly": 0.67,
+        "monthly": null
+      },
+      "region_prices": [],
+      "addons": {
+        "backups": {
+          "price": {
+            "hourly": 0.04,
+            "monthly": 30
+          },
+          "region_prices": []
+        }
+      },
+      "memory": 32768,
+      "disk": 524288,
+      "transfer": 0,
+      "vcpus": 8,
+      "gpus": 1,
+      "network_out": 16000,
+      "class": "gpu",
+      "successor": null,
+      "capabilities": [],
+      "accelerated_devices": 0
+    },
+    {
+      "id": "g7-dedicated-8-4",
+      "label": "G7 Dedicated 8x4",
+      "price": {
+        "hourly": 0.129,
+        "monthly": 86
+      },
+      "region_prices": [
+        {
+          "id": "br-gru",
+          "hourly": 0.1806,
+          "monthly": 120.4
+        },
+        {
+          "id": "id-cgk",
+          "hourly": 0.1548,
+          "monthly": 103.2
+        }
+      ],
+      "addons": {
+        "backups": {
+          "price": {
+            "hourly": 0.015,
+            "monthly": 10
+          },
+          "region_prices": [
+            {
+              "id": "id-cgk",
+              "hourly": 0.018,
+              "monthly": 12
+            },
+            {
+              "id": "br-gru",
+              "hourly": 0.021,
+              "monthly": 14
+            }
+          ]
+        }
+      },
+      "memory": 8192,
+      "disk": 163840,
+      "transfer": 5000,
+      "vcpus": 4,
+      "gpus": 0,
+      "network_out": 5000,
+      "class": "dedicated",
+      "successor": null,
+      "capabilities": [],
+      "accelerated_devices": 0
+    },
+    {
+      "id": "g6-dedicated-2",
+      "label": "Dedicated 4GB",
+      "price": {
+        "hourly": 0.054,
+        "monthly": 36
+      },
+      "region_prices": [
+        {
+          "id": "id-cgk",
+          "hourly": 0.065,
+          "monthly": 43.2
+        },
+        {
+          "id": "br-gru",
+          "hourly": 0.076,
+          "monthly": 50.4
+        }
+      ],
+      "addons": {
+        "backups": {
+          "price": {
+            "hourly": 0.008,
+            "monthly": 5
+          },
+          "region_prices": [
+            {
+              "id": "id-cgk",
+              "hourly": 0.009,
+              "monthly": 6
+            },
+            {
+              "id": "br-gru",
+              "hourly": 0.01,
+              "monthly": 7
+            }
+          ]
+        }
+      },
+      "memory": 4096,
+      "disk": 81920,
+      "transfer": 4000,
+      "vcpus": 2,
+      "gpus": 0,
+      "network_out": 4000,
+      "class": "dedicated",
+      "successor": null,
+      "capabilities": [],
+      "accelerated_devices": 0
+    }
+  ],
+  "page": 1,
+  "pages": 1,
+  "results": 3
+}

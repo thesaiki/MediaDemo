@@ -1,0 +1,28 @@
+{
+  "data": [
+    {
+      "id": "objectstorage",
+      "label": "Object Storage",
+      "price": {
+        "hourly": 0.0075,
+        "monthly": 5
+      },
+      "region_prices": [
+        {
+          "id": "id-cgk",
+          "hourly": 0.0075,
+          "monthly": 5
+        },
+        {
+          "id": "br-gru",
+          "hourly": 0.0075,
+          "monthly": 5
+        }
+      ],
+      "transfer": 1000
+    }
+  ],
+  "page": 1,
+  "pages": 1,
+  "results": 1
+}

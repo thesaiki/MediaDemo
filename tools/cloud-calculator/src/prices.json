@@ -1,0 +1,1055 @@
+{
+  "asOf": "2026-11-19",
+  "plans": {
+    "ada-1s": {
+      "name": "RTX 4000 Ada x1 Small",
+      "fam": "GPU",
+      "hr": 0.52,
+      "tb": 0,
+      "spec": "1× RTX 4000 Ada · 4 vCPU · 16 GB",
+      "src": "gpu",
+      "line": "RTX 4000 Ada",
+      "sync": "api",
+      "apiId": "g2-gpu-rtx4000a1-s"
+    },
+    "ada-1m": {
+      "name": "RTX 4000 Ada x1 Medium",
+      "fam": "GPU",
+      "hr": 0.67,
+      "tb": 0,
+      "spec": "1× RTX 4000 Ada · 8 vCPU · 32 GB",
+      "src": "gpu",
+      "line": "RTX 4000 Ada",
+      "sync": "api",
+      "apiId": "g2-gpu-rtx4000a1-m"
+    },
+    "ada-1l": {
+      "name": "RTX 4000 Ada x1 Large",
+      "fam": "GPU",
+      "hr": 0.96,
+      "tb": 0,
+      "spec": "1× RTX 4000 Ada · 16 vCPU · 64 GB",
+      "src": "gpu",
+      "line": "RTX 4000 Ada",
+      "sync": "api",
+      "apiId": "g2-gpu-rtx4000a1-l"
+    },
+    "ada-1xl": {
+      "name": "RTX 4000 Ada x1 X-Large",
+      "fam": "GPU",
+      "hr": 1.53,
+      "tb": 0,
+      "spec": "1× RTX 4000 Ada · 32 vCPU · 128 GB",
+      "src": "gpu",
+      "line": "RTX 4000 Ada",
+      "sync": "api",
+      "apiId": "g2-gpu-rtx4000a1-xl"
+    },
+    "ada-2s": {
+      "name": "RTX 4000 Ada x2 Small",
+      "fam": "GPU",
+      "hr": 1.05,
+      "tb": 0,
+      "spec": "2× RTX 4000 Ada · 8 vCPU · 32 GB",
+      "src": "gpu",
+      "line": "RTX 4000 Ada",
+      "sync": "api",
+      "apiId": "g2-gpu-rtx4000a2-s"
+    },
+    "ada-2m": {
+      "name": "RTX 4000 Ada x2 Medium",
+      "fam": "GPU",
+      "hr": 1.34,
+      "tb": 0,
+      "spec": "2× RTX 4000 Ada · 16 vCPU · 64 GB",
+      "src": "gpu",
+      "line": "RTX 4000 Ada",
+      "sync": "api",
+      "apiId": "g2-gpu-rtx4000a2-m"
+    },
+    "ada-4s": {
+      "name": "RTX 4000 Ada x4 Small",
+      "fam": "GPU",
+      "hr": 2.96,
+      "tb": 0,
+      "spec": "4× RTX 4000 Ada · 32 vCPU · 128 GB",
+      "src": "gpu",
+      "line": "RTX 4000 Ada",
+      "sync": "api",
+      "apiId": "g2-gpu-rtx4000a4-s"
+    },
+    "ada-4m": {
+      "name": "RTX 4000 Ada x4 Medium",
+      "fam": "GPU",
+      "hr": 3.57,
+      "tb": 0,
+      "spec": "4× RTX 4000 Ada · 48 vCPU · 196 GB",
+      "src": "gpu",
+      "line": "RTX 4000 Ada",
+      "sync": "api",
+      "apiId": "g2-gpu-rtx4000a4-m"
+    },
+    "g2-gpu-rtx4000a2-hs": {
+      "name": "RTX 4000 Ada x2 Medium High Storage",
+      "fam": "GPU",
+      "hr": 1.49,
+      "tb": 0,
+      "spec": "2× RTX 4000 Ada · 16 vCPU · 64 GB",
+      "src": "gpu",
+      "line": "RTX 4000 Ada",
+      "sync": "api",
+      "apiId": "g2-gpu-rtx4000a2-hs"
+    },
+    "bw-1": {
+      "name": "RTX PRO 6000 Blackwell x1",
+      "fam": "GPU",
+      "hr": 3,
+      "tb": 0,
+      "spec": "1× 96 GB VRAM · 16 vCPU · 176 GB",
+      "src": "gpu",
+      "line": "RTX PRO 6000 Blackwell",
+      "sync": "manual",
+      "note": "Not listed by the public pricing API; maintained by hand from the Akamai GPU pricing page."
+    },
+    "bw-2": {
+      "name": "RTX PRO 6000 Blackwell x2",
+      "fam": "GPU",
+      "hr": 6,
+      "tb": 0,
+      "spec": "2× 96 GB VRAM · 32 vCPU · 352 GB",
+      "src": "gpu",
+      "line": "RTX PRO 6000 Blackwell",
+      "sync": "manual",
+      "note": "Not listed by the public pricing API; maintained by hand from the Akamai GPU pricing page."
+    },
+    "bw-4": {
+      "name": "RTX PRO 6000 Blackwell x4",
+      "fam": "GPU",
+      "hr": 12,
+      "tb": 0,
+      "spec": "4× 96 GB VRAM · 64 vCPU · 704 GB",
+      "src": "gpu",
+      "line": "RTX PRO 6000 Blackwell",
+      "sync": "manual",
+      "note": "Not listed by the public pricing API; maintained by hand from the Akamai GPU pricing page."
+    },
+    "bw-8": {
+      "name": "RTX PRO 6000 Blackwell x8",
+      "fam": "GPU",
+      "hr": 24,
+      "tb": 0,
+      "spec": "8× 96 GB VRAM · 128 vCPU · 1408 GB",
+      "src": "gpu",
+      "line": "RTX PRO 6000 Blackwell",
+      "sync": "manual",
+      "note": "Not listed by the public pricing API; maintained by hand from the Akamai GPU pricing page."
+    },
+    "q6k-1": {
+      "name": "Quadro RTX 6000 x1 (Dedicated 32 GB)",
+      "fam": "GPU",
+      "hr": 1.5,
+      "tb": 16,
+      "spec": "1× Quadro RTX 6000 · 8 CPU · 32 GB",
+      "src": "gpu",
+      "line": "Quadro RTX 6000",
+      "sync": "api",
+      "apiId": "g1-gpu-rtx6000-1"
+    },
+    "g1-gpu-rtx6000-2": {
+      "name": "Quadro RTX 6000 x2 (Dedicated 64 GB)",
+      "fam": "GPU",
+      "hr": 3,
+      "tb": 20,
+      "spec": "2× Quadro RTX 6000 · 16 CPU · 64 GB · 20 TB transfer",
+      "src": "gpu",
+      "line": "Quadro RTX 6000",
+      "sync": "api",
+      "apiId": "g1-gpu-rtx6000-2"
+    },
+    "g1-gpu-rtx6000-3": {
+      "name": "Quadro RTX 6000 x3 (Dedicated 96 GB)",
+      "fam": "GPU",
+      "hr": 4.5,
+      "tb": 20,
+      "spec": "3× Quadro RTX 6000 · 20 CPU · 96 GB · 20 TB transfer",
+      "src": "gpu",
+      "line": "Quadro RTX 6000",
+      "sync": "api",
+      "apiId": "g1-gpu-rtx6000-3"
+    },
+    "g1-gpu-rtx6000-4": {
+      "name": "Quadro RTX 6000 x4 (Dedicated 128 GB)",
+      "fam": "GPU",
+      "hr": 6,
+      "tb": 20,
+      "spec": "4× Quadro RTX 6000 · 24 CPU · 128 GB · 20 TB transfer",
+      "src": "gpu",
+      "line": "Quadro RTX 6000",
+      "sync": "api",
+      "apiId": "g1-gpu-rtx6000-4"
+    },
+    "vpu-1s": {
+      "name": "NETINT Quadra T1U VPU x1 Small",
+      "fam": "VPU",
+      "hr": 0.42,
+      "mo": 280,
+      "tb": 0,
+      "spec": "1 VPU · 8 vCPU · 16 GB",
+      "src": "vpu",
+      "line": "NETINT Quadra T1U VPU",
+      "sync": "api",
+      "apiId": "g1-accelerated-netint-vpu-t1u1-s"
+    },
+    "vpu-1m": {
+      "name": "NETINT Quadra T1U VPU x1 Medium",
+      "fam": "VPU",
+      "hr": 0.53,
+      "mo": 352,
+      "tb": 0,
+      "spec": "1 VPU · 12 vCPU · 24 GB",
+      "src": "vpu",
+      "line": "NETINT Quadra T1U VPU",
+      "sync": "api",
+      "apiId": "g1-accelerated-netint-vpu-t1u1-m"
+    },
+    "vpu-2s": {
+      "name": "NETINT Quadra T1U VPU x2 Small",
+      "fam": "VPU",
+      "hr": 0.73,
+      "mo": 488,
+      "tb": 0,
+      "spec": "2 VPU · 12 vCPU · 24 GB",
+      "src": "vpu",
+      "line": "NETINT Quadra T1U VPU",
+      "sync": "api",
+      "apiId": "g1-accelerated-netint-vpu-t1u2-s"
+    },
+    "g1-accelerated-netint-vpu-t1u8-s": {
+      "name": "NETINT Quadra T1U VPU x8 Small",
+      "fam": "VPU",
+      "hr": 2.928,
+      "mo": 1952,
+      "tb": 0,
+      "spec": "8 VPU · 48 vCPU · 96 GB",
+      "src": "vpu",
+      "line": "NETINT Quadra T1U VPU",
+      "sync": "api",
+      "apiId": "g1-accelerated-netint-vpu-t1u8-s"
+    },
+    "g1-accelerated-netint-vpu-t1u8-m": {
+      "name": "NETINT Quadra T1U VPU x8 Medium",
+      "fam": "VPU",
+      "hr": 3.36,
+      "mo": 2240,
+      "tb": 0,
+      "spec": "8 VPU · 64 vCPU · 128 GB",
+      "src": "vpu",
+      "line": "NETINT Quadra T1U VPU",
+      "sync": "api",
+      "apiId": "g1-accelerated-netint-vpu-t1u8-m"
+    },
+    "g1-accelerated-netint-vpu-t1u8-l": {
+      "name": "NETINT Quadra T1U VPU x8 Large",
+      "fam": "VPU",
+      "hr": 4.224,
+      "mo": 2816,
+      "tb": 0,
+      "spec": "8 VPU · 96 vCPU · 192 GB",
+      "src": "vpu",
+      "line": "NETINT Quadra T1U VPU",
+      "sync": "api",
+      "apiId": "g1-accelerated-netint-vpu-t1u8-l"
+    },
+    "g8-4x2": {
+      "name": "G8 Dedicated 4x2",
+      "fam": "CPU",
+      "hr": 0.07,
+      "tb": 0,
+      "spec": "2 vCPU · 4 GB",
+      "src": "cpu",
+      "line": "G8 Dedicated",
+      "sync": "api",
+      "apiId": "g8-dedicated-4-2"
+    },
+    "g8-8x4": {
+      "name": "G8 Dedicated 8x4",
+      "fam": "CPU",
+      "hr": 0.14,
+      "tb": 0,
+      "spec": "4 vCPU · 8 GB",
+      "src": "cpu",
+      "line": "G8 Dedicated",
+      "sync": "api",
+      "apiId": "g8-dedicated-8-4"
+    },
+    "g8-16x8": {
+      "name": "G8 Dedicated 16x8",
+      "fam": "CPU",
+      "hr": 0.27,
+      "tb": 0,
+      "spec": "8 vCPU · 16 GB",
+      "src": "cpu",
+      "line": "G8 Dedicated",
+      "sync": "api",
+      "apiId": "g8-dedicated-16-8"
+    },
+    "g8-32x16": {
+      "name": "G8 Dedicated 32x16",
+      "fam": "CPU",
+      "hr": 0.54,
+      "tb": 0,
+      "spec": "16 vCPU · 32 GB",
+      "src": "cpu",
+      "line": "G8 Dedicated",
+      "sync": "api",
+      "apiId": "g8-dedicated-32-16"
+    },
+    "g8-64x32": {
+      "name": "G8 Dedicated 64x32",
+      "fam": "CPU",
+      "hr": 1.08,
+      "tb": 0,
+      "spec": "32 vCPU · 64 GB",
+      "src": "cpu",
+      "line": "G8 Dedicated",
+      "sync": "api",
+      "apiId": "g8-dedicated-64-32"
+    },
+    "g8-16x4": {
+      "name": "G8 Dedicated 16x4 (1:4)",
+      "fam": "CPU",
+      "hr": 0.21,
+      "tb": 0,
+      "spec": "4 vCPU · 16 GB",
+      "src": "cpu",
+      "line": "G8 Dedicated",
+      "sync": "api",
+      "apiId": "g8-dedicated-16-4"
+    },
+    "g8-32x8": {
+      "name": "G8 Dedicated 32x8 (1:4)",
+      "fam": "CPU",
+      "hr": 0.42,
+      "tb": 0,
+      "spec": "8 vCPU · 32 GB",
+      "src": "cpu",
+      "line": "G8 Dedicated",
+      "sync": "api",
+      "apiId": "g8-dedicated-32-8"
+    },
+    "g8-64x16": {
+      "name": "G8 Dedicated 64x16 (1:4)",
+      "fam": "CPU",
+      "hr": 0.84,
+      "tb": 0,
+      "spec": "16 vCPU · 64 GB",
+      "src": "cpu",
+      "line": "G8 Dedicated",
+      "sync": "api",
+      "apiId": "g8-dedicated-64-16"
+    },
+    "g8-dedicated-8-2": {
+      "name": "G8 Dedicated 8x2 (1:4)",
+      "fam": "CPU",
+      "hr": 0.11,
+      "tb": 0,
+      "spec": "2 vCPU · 8 GB",
+      "src": "cpu",
+      "line": "G8 Dedicated",
+      "sync": "api",
+      "apiId": "g8-dedicated-8-2"
+    },
+    "g8-dedicated-96-24": {
+      "name": "G8 Dedicated 96x24 (1:4)",
+      "fam": "CPU",
+      "hr": 1.26,
+      "tb": 0,
+      "spec": "24 vCPU · 96 GB",
+      "src": "cpu",
+      "line": "G8 Dedicated",
+      "sync": "api",
+      "apiId": "g8-dedicated-96-24"
+    },
+    "g8-dedicated-96-48": {
+      "name": "G8 Dedicated 96x48",
+      "fam": "CPU",
+      "hr": 1.62,
+      "tb": 0,
+      "spec": "48 vCPU · 96 GB",
+      "src": "cpu",
+      "line": "G8 Dedicated",
+      "sync": "api",
+      "apiId": "g8-dedicated-96-48"
+    },
+    "g8-dedicated-128-32": {
+      "name": "G8 Dedicated 128x32 (1:4)",
+      "fam": "CPU",
+      "hr": 1.68,
+      "tb": 0,
+      "spec": "32 vCPU · 128 GB",
+      "src": "cpu",
+      "line": "G8 Dedicated",
+      "sync": "api",
+      "apiId": "g8-dedicated-128-32"
+    },
+    "g8-dedicated-128-64": {
+      "name": "G8 Dedicated 128x64",
+      "fam": "CPU",
+      "hr": 2.16,
+      "tb": 0,
+      "spec": "64 vCPU · 128 GB",
+      "src": "cpu",
+      "line": "G8 Dedicated",
+      "sync": "api",
+      "apiId": "g8-dedicated-128-64"
+    },
+    "g8-dedicated-256-64": {
+      "name": "G8 Dedicated 256x64 (1:4)",
+      "fam": "CPU",
+      "hr": 3.36,
+      "tb": 0,
+      "spec": "64 vCPU · 256 GB",
+      "src": "cpu",
+      "line": "G8 Dedicated",
+      "sync": "api",
+      "apiId": "g8-dedicated-256-64"
+    },
+    "g8-dedicated-256-128": {
+      "name": "G8 Dedicated 256x128",
+      "fam": "CPU",
+      "hr": 4.32,
+      "tb": 0,
+      "spec": "128 vCPU · 256 GB",
+      "src": "cpu",
+      "line": "G8 Dedicated",
+      "sync": "api",
+      "apiId": "g8-dedicated-256-128"
+    },
+    "g8-dedicated-512-128": {
+      "name": "G8 Dedicated 512x128 (1:4)",
+      "fam": "CPU",
+      "hr": 6.84,
+      "tb": 0,
+      "spec": "128 vCPU · 512 GB",
+      "src": "cpu",
+      "line": "G8 Dedicated",
+      "sync": "api",
+      "apiId": "g8-dedicated-512-128"
+    },
+    "g8-dedicated-512-256": {
+      "name": "G8 Dedicated 512x256",
+      "fam": "CPU",
+      "hr": 8.64,
+      "tb": 0,
+      "spec": "256 vCPU · 512 GB",
+      "src": "cpu",
+      "line": "G8 Dedicated",
+      "sync": "api",
+      "apiId": "g8-dedicated-512-256"
+    },
+    "g7-8": {
+      "name": "G7 Dedicated 8 GB",
+      "fam": "CPU",
+      "hr": 0.129,
+      "mo": 86,
+      "tb": 5,
+      "spec": "4 vCPU · 8 GB · 5 TB transfer",
+      "src": "cpu",
+      "line": "G7 Dedicated",
+      "sync": "api",
+      "apiId": "g7-dedicated-8-4"
+    },
+    "g7-16": {
+      "name": "G7 Dedicated 16 GB",
+      "fam": "CPU",
+      "hr": 0.2595,
+      "mo": 173,
+      "tb": 6,
+      "spec": "8 vCPU · 16 GB · 6 TB transfer",
+      "src": "cpu",
+      "line": "G7 Dedicated",
+      "sync": "api",
+      "apiId": "g7-dedicated-16-8"
+    },
+    "g7-32": {
+      "name": "G7 Dedicated 32 GB",
+      "fam": "CPU",
+      "hr": 0.519,
+      "mo": 346,
+      "tb": 7,
+      "spec": "16 vCPU · 32 GB · 7 TB transfer",
+      "src": "cpu",
+      "line": "G7 Dedicated",
+      "sync": "api",
+      "apiId": "g7-dedicated-32-16"
+    },
+    "g7-dedicated-4-2": {
+      "name": "G7 Dedicated 4 GB",
+      "fam": "CPU",
+      "hr": 0.0645,
+      "mo": 43,
+      "tb": 4,
+      "spec": "2 vCPU · 4 GB · 4 TB transfer",
+      "src": "cpu",
+      "line": "G7 Dedicated",
+      "sync": "api",
+      "apiId": "g7-dedicated-4-2"
+    },
+    "g7-dedicated-64-32": {
+      "name": "G7 Dedicated 64 GB",
+      "fam": "CPU",
+      "hr": 1.0365,
+      "mo": 691,
+      "tb": 8,
+      "spec": "32 vCPU · 64 GB · 8 TB transfer",
+      "src": "cpu",
+      "line": "G7 Dedicated",
+      "sync": "api",
+      "apiId": "g7-dedicated-64-32"
+    },
+    "g7-dedicated-96-48": {
+      "name": "G7 Dedicated 96 GB",
+      "fam": "CPU",
+      "hr": 1.5555,
+      "mo": 1037,
+      "tb": 9,
+      "spec": "48 vCPU · 96 GB · 9 TB transfer",
+      "src": "cpu",
+      "line": "G7 Dedicated",
+      "sync": "api",
+      "apiId": "g7-dedicated-96-48"
+    },
+    "g7-dedicated-128-50": {
+      "name": "G7 Dedicated 128 GB",
+      "fam": "CPU",
+      "hr": 2.073,
+      "mo": 1382,
+      "tb": 10,
+      "spec": "50 vCPU · 128 GB · 10 TB transfer",
+      "src": "cpu",
+      "line": "G7 Dedicated",
+      "sync": "api",
+      "apiId": "g7-dedicated-128-50"
+    },
+    "g7-dedicated-256-56": {
+      "name": "G7 Dedicated 256 GB",
+      "fam": "CPU",
+      "hr": 4.1475,
+      "mo": 2765,
+      "tb": 11,
+      "spec": "56 vCPU · 256 GB · 11 TB transfer",
+      "src": "cpu",
+      "line": "G7 Dedicated",
+      "sync": "api",
+      "apiId": "g7-dedicated-256-56"
+    },
+    "sh-4": {
+      "name": "Shared Linode 4 GB",
+      "fam": "CPU",
+      "hr": 0.036,
+      "mo": 24,
+      "tb": 4,
+      "spec": "2 CPU · 4 GB · 4 TB transfer",
+      "src": "cpu",
+      "line": "Shared",
+      "sync": "api",
+      "apiId": "g6-standard-2"
+    },
+    "sh-8": {
+      "name": "Shared Linode 8 GB",
+      "fam": "CPU",
+      "hr": 0.072,
+      "mo": 48,
+      "tb": 5,
+      "spec": "4 CPU · 8 GB · 5 TB transfer",
+      "src": "cpu",
+      "line": "Shared",
+      "sync": "api",
+      "apiId": "g6-standard-4"
+    },
+    "sh-16": {
+      "name": "Shared Linode 16 GB",
+      "fam": "CPU",
+      "hr": 0.144,
+      "mo": 96,
+      "tb": 8,
+      "spec": "6 CPU · 16 GB · 8 TB transfer",
+      "src": "cpu",
+      "line": "Shared",
+      "sync": "api",
+      "apiId": "g6-standard-6"
+    },
+    "g6-nanode-1": {
+      "name": "Shared Nanode 1 GB",
+      "fam": "CPU",
+      "hr": 0.0075,
+      "mo": 5,
+      "tb": 1,
+      "spec": "1 CPU · 1 GB · 1 TB transfer",
+      "src": "cpu",
+      "line": "Shared",
+      "sync": "api",
+      "apiId": "g6-nanode-1"
+    },
+    "g6-standard-1": {
+      "name": "Shared Linode 2 GB",
+      "fam": "CPU",
+      "hr": 0.018,
+      "mo": 12,
+      "tb": 2,
+      "spec": "1 CPU · 2 GB · 2 TB transfer",
+      "src": "cpu",
+      "line": "Shared",
+      "sync": "api",
+      "apiId": "g6-standard-1"
+    },
+    "g6-standard-8": {
+      "name": "Shared Linode 32 GB",
+      "fam": "CPU",
+      "hr": 0.288,
+      "mo": 192,
+      "tb": 16,
+      "spec": "8 CPU · 32 GB · 16 TB transfer",
+      "src": "cpu",
+      "line": "Shared",
+      "sync": "api",
+      "apiId": "g6-standard-8"
+    },
+    "g6-standard-16": {
+      "name": "Shared Linode 64 GB",
+      "fam": "CPU",
+      "hr": 0.576,
+      "mo": 384,
+      "tb": 20,
+      "spec": "16 CPU · 64 GB · 20 TB transfer",
+      "src": "cpu",
+      "line": "Shared",
+      "sync": "api",
+      "apiId": "g6-standard-16"
+    },
+    "g6-standard-20": {
+      "name": "Shared Linode 96 GB",
+      "fam": "CPU",
+      "hr": 0.864,
+      "mo": 576,
+      "tb": 20,
+      "spec": "20 CPU · 96 GB · 20 TB transfer",
+      "src": "cpu",
+      "line": "Shared",
+      "sync": "api",
+      "apiId": "g6-standard-20"
+    },
+    "g6-standard-24": {
+      "name": "Shared Linode 128 GB",
+      "fam": "CPU",
+      "hr": 1.152,
+      "mo": 768,
+      "tb": 20,
+      "spec": "24 CPU · 128 GB · 20 TB transfer",
+      "src": "cpu",
+      "line": "Shared",
+      "sync": "api",
+      "apiId": "g6-standard-24"
+    },
+    "g6-standard-32": {
+      "name": "Shared Linode 192 GB",
+      "fam": "CPU",
+      "hr": 1.728,
+      "mo": 1152,
+      "tb": 20,
+      "spec": "32 CPU · 192 GB · 20 TB transfer",
+      "src": "cpu",
+      "line": "Shared",
+      "sync": "api",
+      "apiId": "g6-standard-32"
+    },
+    "hm-24": {
+      "name": "High Memory 24 GB",
+      "fam": "CPU",
+      "hr": 0.09,
+      "mo": 60,
+      "tb": 5,
+      "spec": "2 CPU · 24 GB · 5 TB transfer",
+      "src": "cpu",
+      "line": "High Memory",
+      "sync": "api",
+      "apiId": "g7-highmem-1"
+    },
+    "hm-48": {
+      "name": "High Memory 48 GB",
+      "fam": "CPU",
+      "hr": 0.18,
+      "mo": 120,
+      "tb": 6,
+      "spec": "2 CPU · 48 GB · 6 TB transfer",
+      "src": "cpu",
+      "line": "High Memory",
+      "sync": "api",
+      "apiId": "g7-highmem-2"
+    },
+    "g7-highmem-4": {
+      "name": "High Memory 90 GB",
+      "fam": "CPU",
+      "hr": 0.36,
+      "mo": 240,
+      "tb": 7,
+      "spec": "4 CPU · 90 GB · 7 TB transfer",
+      "src": "cpu",
+      "line": "High Memory",
+      "sync": "api",
+      "apiId": "g7-highmem-4"
+    },
+    "g7-highmem-8": {
+      "name": "High Memory 150 GB",
+      "fam": "CPU",
+      "hr": 0.72,
+      "mo": 480,
+      "tb": 8,
+      "spec": "8 CPU · 150 GB · 8 TB transfer",
+      "src": "cpu",
+      "line": "High Memory",
+      "sync": "api",
+      "apiId": "g7-highmem-8"
+    },
+    "g7-highmem-16": {
+      "name": "High Memory 300 GB",
+      "fam": "CPU",
+      "hr": 1.44,
+      "mo": 960,
+      "tb": 9,
+      "spec": "16 CPU · 300 GB · 9 TB transfer",
+      "src": "cpu",
+      "line": "High Memory",
+      "sync": "api",
+      "apiId": "g7-highmem-16"
+    }
+  },
+  "dbPlans": {
+    "none": {
+      "name": "None",
+      "p": {},
+      "sync": "manual"
+    },
+    "pg-sh4": {
+      "name": "PostgreSQL · Shared 4 GB",
+      "p": {
+        "1": 63,
+        "3": 147
+      },
+      "sync": "api",
+      "apiId": "g6-standard-2",
+      "engine": "postgresql"
+    },
+    "pg-sh8": {
+      "name": "PostgreSQL · Shared 8 GB",
+      "p": {
+        "1": 126,
+        "3": 294
+      },
+      "sync": "api",
+      "apiId": "g6-standard-4",
+      "engine": "postgresql"
+    },
+    "pg-g7-4": {
+      "name": "PostgreSQL · G7 Dedicated 4 GB",
+      "p": {
+        "1": 81.6,
+        "2": 171.6,
+        "3": 246
+      },
+      "sync": "api",
+      "apiId": "g7-dedicated-4-2",
+      "engine": "postgresql"
+    },
+    "pg-g7-8": {
+      "name": "PostgreSQL · G7 Dedicated 8 GB",
+      "p": {
+        "1": 163.2,
+        "2": 342,
+        "3": 492
+      },
+      "sync": "api",
+      "apiId": "g7-dedicated-8-4",
+      "engine": "postgresql"
+    },
+    "pg-g7-16": {
+      "name": "PostgreSQL · G7 Dedicated 16 GB",
+      "p": {
+        "1": 327.6,
+        "2": 708,
+        "3": 982.8
+      },
+      "sync": "api",
+      "apiId": "g7-dedicated-16-8",
+      "engine": "postgresql"
+    },
+    "pg-g7-32": {
+      "name": "PostgreSQL · G7 Dedicated 32 GB",
+      "p": {
+        "1": 655.2,
+        "2": 1401.6,
+        "3": 1965.6
+      },
+      "sync": "api",
+      "apiId": "g7-dedicated-32-16",
+      "engine": "postgresql"
+    },
+    "vk-g7-4": {
+      "name": "Valkey · G7 Dedicated 4 GB (monthly)",
+      "p": {
+        "1": 59,
+        "2": 117,
+        "3": 176
+      },
+      "sync": "api",
+      "apiId": "g7-dedicated-4-2",
+      "engine": "valkey"
+    },
+    "vk-g7-8": {
+      "name": "Valkey · G7 Dedicated 8 GB (monthly)",
+      "p": {
+        "1": 117,
+        "2": 234,
+        "3": 351
+      },
+      "sync": "api",
+      "apiId": "g7-dedicated-8-4",
+      "engine": "valkey"
+    }
+  },
+  "rates": {
+    "egressPerGB": {
+      "label": "Outbound transfer overage",
+      "unit": "$/GB",
+      "value": 0.005,
+      "sync": "api"
+    },
+    "objBase": {
+      "label": "Object Storage base",
+      "unit": "$/month",
+      "value": 5,
+      "sync": "api"
+    },
+    "objIncludedGB": {
+      "label": "Object Storage included storage",
+      "unit": "GB",
+      "value": 250,
+      "sync": "manual",
+      "note": "no quota field in object-storage/types"
+    },
+    "objPerGB": {
+      "label": "Object Storage overage",
+      "unit": "$/GB/month",
+      "value": 0.02,
+      "sync": "api"
+    },
+    "objPoolTB": {
+      "label": "Object Storage transfer pool",
+      "unit": "TB",
+      "value": 1,
+      "sync": "api"
+    },
+    "blockPerGB": {
+      "label": "Block Storage",
+      "unit": "$/GB/month",
+      "value": 0.1,
+      "sync": "api"
+    },
+    "nbBasicMo": {
+      "label": "NodeBalancer",
+      "unit": "$/month",
+      "value": 10,
+      "sync": "api"
+    },
+    "nbPremiumHr": {
+      "label": "Premium NodeBalancer",
+      "unit": "$/hour",
+      "value": 0.225,
+      "sync": "api"
+    },
+    "nbPremiumPerGB": {
+      "label": "Premium NodeBalancer data processed",
+      "unit": "$/GB",
+      "value": 0.005,
+      "sync": "manual",
+      "note": "no data-processing price in nodebalancers/types"
+    },
+    "lkeHA": {
+      "label": "LKE HA control plane",
+      "unit": "$/cluster/month",
+      "value": 60,
+      "sync": "api"
+    },
+    "lkeEnt": {
+      "label": "LKE Enterprise control plane",
+      "unit": "$/cluster/month",
+      "value": 300,
+      "sync": "api"
+    },
+    "managedPerInstance": {
+      "label": "Linode Managed",
+      "unit": "$/instance/month",
+      "value": 100,
+      "sync": "manual",
+      "note": "Linode Managed has no public pricing endpoint"
+    }
+  },
+  "changes": [
+    {
+      "date": "2026-11-19",
+      "items": [
+        {
+          "table": "plans",
+          "key": "g7-8",
+          "label": "G7 Dedicated 8 GB",
+          "field": "hr",
+          "old": 0.13,
+          "new": 0.129
+        },
+        {
+          "table": "plans",
+          "key": "g7-16",
+          "label": "G7 Dedicated 16 GB",
+          "field": "hr",
+          "old": 0.26,
+          "new": 0.2595
+        },
+        {
+          "table": "plans",
+          "key": "g7-32",
+          "label": "G7 Dedicated 32 GB",
+          "field": "hr",
+          "old": 0.52,
+          "new": 0.519
+        }
+      ],
+      "newPlans": [
+        {
+          "key": "g6-nanode-1",
+          "name": "Shared Nanode 1 GB"
+        },
+        {
+          "key": "g6-standard-1",
+          "name": "Shared Linode 2 GB"
+        },
+        {
+          "key": "g6-standard-8",
+          "name": "Shared Linode 32 GB"
+        },
+        {
+          "key": "g6-standard-16",
+          "name": "Shared Linode 64 GB"
+        },
+        {
+          "key": "g6-standard-20",
+          "name": "Shared Linode 96 GB"
+        },
+        {
+          "key": "g6-standard-24",
+          "name": "Shared Linode 128 GB"
+        },
+        {
+          "key": "g6-standard-32",
+          "name": "Shared Linode 192 GB"
+        },
+        {
+          "key": "g7-highmem-4",
+          "name": "High Memory 90 GB"
+        },
+        {
+          "key": "g7-highmem-8",
+          "name": "High Memory 150 GB"
+        },
+        {
+          "key": "g7-highmem-16",
+          "name": "High Memory 300 GB"
+        },
+        {
+          "key": "g1-gpu-rtx6000-2",
+          "name": "Quadro RTX 6000 x2 (Dedicated 64 GB)"
+        },
+        {
+          "key": "g1-gpu-rtx6000-3",
+          "name": "Quadro RTX 6000 x3 (Dedicated 96 GB)"
+        },
+        {
+          "key": "g1-gpu-rtx6000-4",
+          "name": "Quadro RTX 6000 x4 (Dedicated 128 GB)"
+        },
+        {
+          "key": "g2-gpu-rtx4000a2-hs",
+          "name": "RTX 4000 Ada x2 Medium High Storage"
+        },
+        {
+          "key": "g1-accelerated-netint-vpu-t1u8-s",
+          "name": "NETINT Quadra T1U VPU x8 Small"
+        },
+        {
+          "key": "g1-accelerated-netint-vpu-t1u8-m",
+          "name": "NETINT Quadra T1U VPU x8 Medium"
+        },
+        {
+          "key": "g1-accelerated-netint-vpu-t1u8-l",
+          "name": "NETINT Quadra T1U VPU x8 Large"
+        },
+        {
+          "key": "g8-dedicated-96-48",
+          "name": "G8 Dedicated 96x48"
+        },
+        {
+          "key": "g8-dedicated-128-64",
+          "name": "G8 Dedicated 128x64"
+        },
+        {
+          "key": "g8-dedicated-256-128",
+          "name": "G8 Dedicated 256x128"
+        },
+        {
+          "key": "g8-dedicated-512-256",
+          "name": "G8 Dedicated 512x256"
+        },
+        {
+          "key": "g8-dedicated-8-2",
+          "name": "G8 Dedicated 8x2 (1:4)"
+        },
+        {
+          "key": "g8-dedicated-96-24",
+          "name": "G8 Dedicated 96x24 (1:4)"
+        },
+        {
+          "key": "g8-dedicated-128-32",
+          "name": "G8 Dedicated 128x32 (1:4)"
+        },
+        {
+          "key": "g8-dedicated-256-64",
+          "name": "G8 Dedicated 256x64 (1:4)"
+        },
+        {
+          "key": "g8-dedicated-512-128",
+          "name": "G8 Dedicated 512x128 (1:4)"
+        },
+        {
+          "key": "g7-dedicated-4-2",
+          "name": "G7 Dedicated 4 GB"
+        },
+        {
+          "key": "g7-dedicated-64-32",
+          "name": "G7 Dedicated 64 GB"
+        },
+        {
+          "key": "g7-dedicated-96-48",
+          "name": "G7 Dedicated 96 GB"
+        },
+        {
+          "key": "g7-dedicated-128-50",
+          "name": "G7 Dedicated 128 GB"
+        },
+        {
+          "key": "g7-dedicated-256-56",
+          "name": "G7 Dedicated 256 GB"
+        }
+      ],
+      "removed": []
+    }
+  ]
+}
