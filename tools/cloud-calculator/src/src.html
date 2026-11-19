@@ -36,7 +36,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 /* Masthead */
 header.mast{border-bottom:1px solid var(--line);background:var(--surface)}
 header.mast .wrap{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 28px;padding-block:20px 0}
-.brand h1{font:700 clamp(1.35rem,2.4vw,1.8rem)/1.1 var(--f-display);font-stretch:112%;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.brand h1{font:700 clamp(1.35rem,2.4vw,1.8rem)/1.1 var(--f-display);font-stretch:112%;letter-spacing:-.01em;margin:0 0 14px;text-wrap:balance}
 .brand h1 b{color:var(--accent);font-weight:800}
 .brand .back{display:inline-block;margin:0 0 8px;color:var(--muted);font:600 .8rem/1.2 var(--f-body);text-decoration:none}
 .brand .back:hover{color:var(--accent);text-decoration:underline}
@@ -48,8 +48,6 @@ header.mast .wrap{position:relative}
 .themebtn[aria-pressed="true"] .i-sun{display:block}
 .themebtn[aria-pressed="true"] .i-moon{display:none}
 .brand{padding-right:48px}
-.brand p{margin:6px 0 14px;color:var(--muted);font-size:.86rem}
-.brand p .mono{font-size:.8rem}
 nav.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin-bottom:-1px}
 nav.tabs a{display:block;padding:10px 14px;text-decoration:none;color:var(--muted);font:600 .86rem/1 var(--f-body);border:1px solid transparent;border-bottom:none;border-radius:var(--r) var(--r) 0 0;white-space:nowrap}
 nav.tabs a[aria-current="page"]{color:var(--ink);background:var(--bg);border-color:var(--line)}
@@ -183,6 +181,13 @@ textarea#io{width:100%;min-height:140px;font:12px/1.45 var(--f-mono);border:1px 
 .prose li+li{margin-top:4px}
 .analogy{border-left:3px solid var(--accent);background:var(--accent-soft);padding:12px 14px;border-radius:0 var(--r) var(--r) 0}
 .pricegrid{display:grid;gap:16px}
+.pricegrid .card{min-width:0}
+.chip.manual{background:var(--sunk);color:var(--muted);margin-left:6px;vertical-align:1px;cursor:help}
+.chip.gone{background:var(--warn-bg);color:var(--warn);margin-left:6px;vertical-align:1px}
+tr.grp td{background:var(--sunk);color:var(--muted);font-size:.72rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding-block:6px}
+td.delta{white-space:nowrap}
+td.it{min-width:8em}
+td .names{color:var(--muted);font-size:.76rem;display:block;margin-top:2px}
 footer{border-top:1px solid var(--line);color:var(--muted);font-size:.78rem}
 footer .wrap{padding-block:18px 28px;display:grid;gap:6px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -196,7 +201,6 @@ footer .wrap{padding-block:18px 28px;display:grid;gap:6px}
     <div class="brand">
       <a class="back" href="https://mediademo.fde-demo.com/" data-main-site>&larr; Back to Media Solutions</a>
       <h1>Linode <b>AI&nbsp;&amp;&nbsp;Media</b> Cost Planner</h1>
-      <p>Akamai Cloud list prices, USD, snapshot <span class="mono" id="asof"></span>. A planning tool, not a quote.</p>
     </div>
     <nav class="tabs" aria-label="Sections">
       <a href="#planner" data-view="planner">Planner</a>
@@ -317,8 +321,11 @@ function fld(path, label, o = {}){
   const id = 'f-' + path.replace(/\./g,'-');
   const v = getP(state, path);
   let ctl;
-  if(o.options){
-    ctl = `<select id="${id}" data-k="${path}">${o.options.map(([val,txt]) => `<option value="${esc(val)}"${String(v)===String(val)?' selected':''}>${esc(txt)}</option>`).join('')}</select>`;
+  const opt = ([val,txt]) => `<option value="${esc(val)}"${String(v)===String(val)?' selected':''}>${esc(txt)}</option>`;
+  if(o.groups){
+    ctl = `<select id="${id}" data-k="${path}">${o.groups.map(([g,opts]) => `<optgroup label="${esc(g)}">${opts.map(opt).join('')}</optgroup>`).join('')}</select>`;
+  } else if(o.options){
+    ctl = `<select id="${id}" data-k="${path}">${o.options.map(opt).join('')}</select>`;
   } else if(o.text){
     ctl = `<input id="${id}" data-k="${path}" type="text" value="${esc(v ?? '')}">`;
   } else {
@@ -326,7 +333,15 @@ function fld(path, label, o = {}){
   }
   return `<label class="fld"${o.wide?' style="grid-column:1/-1"':''}><span class="lab">${label}</span><span class="ctl">${ctl}${o.suf?`<span class="suf">${o.suf}</span>`:''}</span>${o.hint?`<span class="hint">${o.hint}</span>`:''}</label>`;
 }
-const planOpts = fams => Object.entries(PLANS).filter(([k,p]) => !fams || fams.includes(p.fam)).map(([k,p]) => [k, `${p.name} — $${p.hr}/h${p.mo?` (cap $${p.mo}/mo)`:''}`]);
+// Plans grouped by product line (first-seen order), cheapest first within a line.
+function planLines(entries){
+  const lines = new Map();
+  entries.forEach(([k,p]) => { const l = p.line || p.fam; if(!lines.has(l)) lines.set(l, []); lines.get(l).push([k,p]); });
+  lines.forEach(list => list.sort((a,b) => a[1].hr - b[1].hr));
+  return [...lines];
+}
+const planOpts = fams => planLines(Object.entries(PLANS).filter(([k,p]) => !fams || fams.includes(p.fam)))
+  .map(([l,list]) => [l, list.map(([k,p]) => [k, `${p.name} — $${p.hr}/h${p.mo?` (cap $${p.mo}/mo)`:''}`])]);
 const sec = (key, title, tag, body, open = true) => `<details class="sec" data-sec="${key}"${open?' open':''}><summary>${title}${tag?`<span class="tag">${tag}</span>`:''}<span class="sec-total" id="t-${key}"></span></summary><div class="secbody">${body}</div></details>`;
 
 function stageHTML(st, i){
@@ -335,7 +350,7 @@ function stageHTML(st, i){
   if(st.method === 'fixed') m = fld(p+'.count','Instances',{step:1,suf:'nodes'}) + fld(p+'.hours','Hours / month',{step:1,suf:'h',hint:'730 = always on'});
   else if(st.method === 'live') m = fld(p+'.concurrent',`Concurrent ${esc(st.unitLabel||'units')}`,{step:1}) + fld(p+'.perInstance','Capacity per instance',{step:'any',suf:esc(st.unitLabel||'units'),hint:'From your benchmark'}) + fld(p+'.hours','Hours / month',{step:1,suf:'h'}) + fld(p+'.unitLabel','Unit name',{text:true});
   else m = fld(p+'.units','Work units / month',{step:'any',suf:esc(st.unitLabel||'units')}) + fld(p+'.rate','Units per instance-hour',{step:'any',hint:'Throughput of one instance'}) + fld(p+'.util','Achieved utilization',{step:.05,max:.99,hint:'0.8 = 80%'}) + fld(p+'.unitLabel','Unit name',{text:true});
-  return `<div class="stage"><div class="top">${fld(p+'.label','Stage',{text:true})}${fld(p+'.plan','Plan',{options:planOpts()})}${fld(p+'.method','Sizing method',{options:[['fixed','Fixed fleet'],['live','Live concurrency'],['batch','Batch throughput']]})}<button class="btn ghost" type="button" data-rmstage="${i}" aria-label="Remove stage">Remove</button></div><div class="grid">${m}</div></div>`;
+  return `<div class="stage"><div class="top">${fld(p+'.label','Stage',{text:true})}${fld(p+'.plan','Plan',{groups:planOpts()})}${fld(p+'.method','Sizing method',{options:[['fixed','Fixed fleet'],['live','Live concurrency'],['batch','Batch throughput']]})}<button class="btn ghost" type="button" data-rmstage="${i}" aria-label="Remove stage">Remove</button></div><div class="grid">${m}</div></div>`;
 }
 function customHTML(c, i){
   const p = `custom.${i}`;
@@ -366,7 +381,7 @@ function renderForm(){
       `<p class="intro">Self-hosted open-weight models on GPU Linodes. Throughput is the aggregate tokens per second one instance sustains under continuous batching. The defaults are assumptions: replace them with your own benchmark.</p>
        <div class="grid">
        ${fld('serving.profile','Serving profile',{options:Object.entries(PROFILES).map(([k,p])=>[k,p.label]),wide:true})}
-       ${fld('serving.plan','GPU plan',{options:planOpts(['GPU']),wide:true})}
+       ${fld('serving.plan','GPU plan',{groups:planOpts(['GPU']),wide:true})}
        ${fld('serving.prefillTps','Prefill throughput',{step:'any',suf:'tok/s',hint:'Input tokens processed per second'})}
        ${fld('serving.decodeTps','Decode throughput',{step:'any',suf:'tok/s',hint:'Output tokens generated per second'})}
        ${fld('serving.utilization','Target utilization',{step:.05,max:.99,hint:'Headroom for latency SLOs'})}
@@ -428,7 +443,7 @@ function recalc(){
     ? `<span>GPU-seconds per call <b>${r.gpuSec.toFixed(3)}</b></span><span>Peak load <b>${r.peakCps.toFixed(2)} calls/s</b></span><span>Busy GPU-hours <b>${qty(r.busyHrs)}</b></span><span>${state.serving.provisioning==='always'?'Instances':'Instance-months'} <b>${qty(r.inst)}</b></span><span>Monthly busy <b>${r.instHours?Math.round(r.busyHrs/r.instHours*100):0}%</b></span>`
     : `<span>No calls routed to Linode GPUs.</span>`;
   const dn = $('#d-net');
-  if(dn) dn.innerHTML = `<span>Pooled allowance <b>${r.poolTB.toFixed(2)} TB</b></span><span>Billable <b>${qty(r.billableGB)} GB</b></span><span>Rate <b>$0.005/GB</b></span>`;
+  if(dn) dn.innerHTML = `<span>Pooled allowance <b>${r.poolTB.toFixed(2)} TB</b></span><span>Billable <b>${qty(r.billableGB)} GB</b></span><span>Rate <b>$${RATES.egressPerGB}/GB</b></span>`;
 
   // meter
   const layers = LAYERS.map(([n,v]) => [n, v, r.byLayer[n] || 0]).filter(x => x[2] > 0);
@@ -546,7 +561,6 @@ $('#b-load').addEventListener('click', () => {
 $('#b-reset').addEventListener('click', () => { loadPreset(presetId); renderForm(); say('Reset to the use-case defaults'); });
 
 // ---------- static views ----------
-$('#asof').textContent = PRICES_ASOF;
 $('#preset').innerHTML = ['AI','Media'].map(g => `<optgroup label="${g==='AI'?'AI workloads':'Media AI'}">${USE_CASES.filter(u=>u.group===g).map(u=>`<option value="${u.id}">${esc(u.title)}</option>`).join('')}</optgroup>`).join('');
 
 $('#lib').innerHTML = USE_CASES.map(u => {
@@ -602,7 +616,7 @@ Cost per unit           = operating cost ÷ units per month (before reserve)</pr
 <p>Every duplicate job is billed GPU or VPU time. The retry field shows the cost of rework; idempotency keys are how you reduce it. Each library entry names a key, where it is stored, how long it lives and what a duplicate request receives. The general pattern: derive the key from the business identity plus a version (asset_id + rendition profile + model version), store it with a unique constraint or a Valkey SET NX, keep it at least as long as your queue’s redelivery window, and return the first result for any duplicate.</p>
 <h3>What this planner does not do</h3>
 <ul>
-<li>It does not connect to your Akamai account, read invoices or refresh prices. The price book is a dated snapshot.</li>
+<li>It does not connect to your Akamai account or read invoices. List prices are refreshed daily from the public Akamai Cloud pricing API; the few items that API does not list are kept by hand and marked in the price book.</li>
 <li>It does not validate that a model fits in VRAM or meets latency targets. Benchmark before committing.</li>
 <li>It excludes CDN delivery, security products, taxes, committed-use discounts and support contracts. Add them as custom lines when in scope.</li>
 <li>Regional price differences (GPU and some services vary by region) are not modeled.</li>
@@ -610,25 +624,69 @@ Cost per unit           = operating cost ÷ units per month (before reserve)</pr
 <h3>Run it yourself</h3>
 <p>The planner is a single self-contained HTML file with no build step and no server logic, so any static host works: a Nanode with a web server, an Object Storage bucket, or a bucket fronted by the Akamai CDN.</p>`;
 
-const fam = f => Object.values(P).filter(p => p.fam === f);
-const ptable = (title, rows, src) => `<div class="card"><div class="shrow"><h3>${title}</h3><a href="${SRC[src].u}" target="_blank" rel="noopener">${esc(SRC[src].t)}</a></div><div class="tablewrap"><table><thead><tr><th>Plan</th><th>Shape</th><th class="r">$/hour</th><th class="r">Monthly cap</th><th class="r">Bundled transfer</th></tr></thead><tbody>${rows.map(p => `<tr><td>${esc(p.name)}</td><td>${esc(p.spec)}</td><td class="r num">$${p.hr}</td><td class="r num">${p.mo?'$'+p.mo:'—'}</td><td class="r num">${p.tb} TB</td></tr>`).join('')}</tbody></table></div></div>`;
+// ---------- price book ----------
+const BOOK = PRICE_BOOK;
+const RB = BOOK.rates;
+const day = iso => { const d = new Date(iso + 'T00:00:00Z'); return isNaN(d) ? esc(iso) : `<time datetime="${esc(iso)}">${d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'})}</time>`; };
+const MANUAL_TIP = 'Not listed by the public pricing API; maintained by hand';
+const manualChip = tip => `<span class="chip manual" title="${esc(tip || MANUAL_TIP)}">manual</span>`;
+const goneChip = since => `<span class="chip gone" title="This API id was not returned by the pricing API on ${esc(since)}; price kept from the last sync">not in API since ${esc(since)}</span>`;
+const marks = e => (e.sync === 'manual' ? manualChip(e.note) : '') + (e.missingSince ? goneChip(e.missingSince) : '');
+const usd = v => '$' + (+v).toLocaleString('en-US',{maximumFractionDigits:4});
+const rv = k => usd(RB[k].value);
+// Marks a platform row when any of the rates it shows is kept by hand.
+const rmarks = (...ks) => {
+  const man = ks.filter(k => RB[k].sync === 'manual').map(k => RB[k].label);
+  const gone = ks.map(k => RB[k].missingSince).filter(Boolean);
+  return (man.length ? manualChip(`${man.join(', ')}: ${MANUAL_TIP.toLowerCase()}`) : '') + (gone.length ? goneChip(gone[0]) : '');
+};
+
+const ptable = (title, fams, src) => {
+  const groups = planLines(Object.entries(P).filter(([k,p]) => fams.includes(p.fam)));
+  const rows = groups.map(([line, list]) => `${groups.length > 1 ? `<tr class="grp"><td colspan="5">${esc(line)}</td></tr>` : ''}${list.map(([k,p]) =>
+    `<tr><td>${esc(p.name)}${marks(p)}</td><td>${esc(p.spec)}</td><td class="r num">$${p.hr}</td><td class="r num">${p.mo?'$'+p.mo:'—'}</td><td class="r num">${p.tb} TB</td></tr>`).join('')}`).join('');
+  return `<div class="card"><div class="shrow"><h3>${title}</h3><a href="${SRC[src].u}" target="_blank" rel="noopener">${esc(SRC[src].t)}</a></div><div class="tablewrap"><table><thead><tr><th>Plan</th><th>Shape</th><th class="r">$/hour</th><th class="r">Monthly cap</th><th class="r">Bundled transfer</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+};
+
+// Recent price changes, newest first, flattened to rows and capped.
+const FIELD = { hr: '$/hour', mo: 'monthly cap', tb: 'bundled transfer' };
+const fieldName = (it) => it.table === 'rates' ? ((RB[it.key] || {}).unit || 'rate') : it.field.startsWith('p.') ? `${it.field.slice(2)}-node cluster / month` : (FIELD[it.field] || it.field);
+const fval = (it, v) => v === null || v === undefined ? 'none' : it.field === 'tb' ? `${v} TB` : (it.table === 'rates' && !/\$/.test((RB[it.key] || {}).unit || '')) ? String(v) : usd(v);
+function changeRows(limit){
+  const rows = [];
+  for (const c of BOOK.changes || []) {
+    for (const it of c.items || []) rows.push(`<tr><td class="mono">${day(c.date)}</td><td class="it">${esc(it.label)}<span class="names">${esc(fieldName(it))}</span></td><td class="r num delta">${esc(fval(it, it.old))} → ${esc(fval(it, it.new))}</td></tr>`);
+    if ((c.newPlans || []).length) rows.push(`<tr><td class="mono">${day(c.date)}</td><td colspan="2">${c.newPlans.length === 1 ? 'New plan added' : c.newPlans.length + ' new plans added'}<span class="names">${esc(c.newPlans.map(n => n.name).join(', '))}</span></td></tr>`);
+    if ((c.removed || []).length) rows.push(`<tr><td class="mono">${day(c.date)}</td><td colspan="2">No longer listed by the API (prices kept, flagged)<span class="names">${esc(c.removed.map(r => r.label).join(', '))}</span></td></tr>`);
+    if ((c.restored || []).length) rows.push(`<tr><td class="mono">${day(c.date)}</td><td colspan="2">Listed by the API again<span class="names">${esc(c.restored.map(r => r.label).join(', '))}</span></td></tr>`);
+  }
+  return rows.slice(0, limit);
+}
+const crow = changeRows(20);
+const changesCard = `<div class="card"><div class="shrow"><h3>Recent price changes</h3>${crow.length ? '<span class="intro">Newest first, up to 20 rows</span>' : ''}</div>${crow.length
+  ? `<div class="tablewrap"><table><thead><tr><th>Date</th><th>Item</th><th class="r">Old → new</th></tr></thead><tbody>${crow.join('')}</tbody></table></div>`
+  : `<p class="intro">No price changes since this price book started tracking them on ${day(BOOK.asOf)}. The daily sync records every change here.</p>`}</div>`;
+
 $('#pricebody').innerHTML = `
-  <div class="card"><h3>About this price book</h3><p class="intro">Snapshot of Akamai Cloud list prices taken ${PRICES_ASOF} for core regions, USD, before tax. Plans without a monthly cap on the official page are priced as hourly rate × hours. Akamai’s GPU documentation also mentions a $350/month figure for RTX 4000 Ada x1 Small while the pricing page lists only $0.52/hour; this planner uses the hourly rate, so an always-on RTX 4000 Ada x1 Small shows as $379.60 here. Confirm current prices and regional variation before quoting.</p></div>
-  ${ptable('GPU plans', fam('GPU'), 'gpu')}
-  ${ptable('Accelerated Compute (NETINT VPU)', fam('VPU'), 'vpu')}
-  ${ptable('CPU plans used in presets', fam('CPU'), 'cpu')}
+  <div class="card"><h3>About this price book</h3>
+    <p class="intro">Base list prices in USD, synced daily from the Akamai Cloud (Linode) pricing API; last change ${day(BOOK.asOf)}.</p>
+    <p class="intro">Core-region prices before tax; regional surcharges (for example Jakarta and São Paulo) are not modeled. Items marked ${manualChip()} are not listed by the pricing API and are maintained by hand. Plans without a monthly cap are priced as hourly rate × hours. Akamai’s GPU documentation also mentions a $350/month figure for RTX 4000 Ada x1 Small while the pricing page lists only $0.52/hour; this planner uses the hourly rate, so an always-on RTX 4000 Ada x1 Small shows as $379.60 here. A planning tool, not a quote: confirm current prices before quoting.</p></div>
+  ${changesCard}
+  ${ptable('GPU plans', ['GPU'], 'gpu')}
+  ${ptable('Accelerated Compute (NETINT VPU)', ['VPU'], 'vpu')}
+  ${ptable('CPU plans', ['CPU'], 'cpu')}
   <div class="card"><div class="shrow"><h3>Platform, storage, network</h3></div><div class="tablewrap"><table><thead><tr><th>Item</th><th>Price</th><th>Source</th></tr></thead><tbody>
     <tr><td>LKE standard control plane</td><td>No charge</td><td><a href="${SRC.lke.u}" target="_blank" rel="noopener">LKE pricing</a></td></tr>
-    <tr><td>LKE HA control plane</td><td class="num">from $60 / cluster / month</td><td><a href="${SRC.lke.u}" target="_blank" rel="noopener">LKE pricing</a></td></tr>
-    <tr><td>LKE Enterprise</td><td class="num">$300 / cluster / month</td><td><a href="${SRC.lke.u}" target="_blank" rel="noopener">LKE pricing</a></td></tr>
-    <tr><td>NodeBalancer</td><td class="num">$10 / month, no data processing charge</td><td><a href="${SRC.nb.u}" target="_blank" rel="noopener">NodeBalancer pricing</a></td></tr>
-    <tr><td>Premium NodeBalancer</td><td class="num">$0.225 / hour + $0.005 / GB processed</td><td><a href="${SRC.nb.u}" target="_blank" rel="noopener">NodeBalancer pricing</a></td></tr>
-    <tr><td>Object Storage</td><td class="num">$5 / month incl. 250 GB, then $0.02 / GB; +1 TB transfer pool</td><td><a href="${SRC.obj.u}" target="_blank" rel="noopener">Object Storage pricing</a></td></tr>
-    <tr><td>Block Storage</td><td class="num">$0.10 / GB / month</td><td><a href="${SRC.block.u}" target="_blank" rel="noopener">Block Storage</a></td></tr>
-    <tr><td>Outbound transfer overage</td><td class="num">$0.005 / GB (core regions)</td><td><a href="${SRC.xfer.u}" target="_blank" rel="noopener">Network transfer</a></td></tr>
-    <tr><td>Linode Managed</td><td class="num">$100 / instance / month</td><td><a href="${SRC.svc.u}" target="_blank" rel="noopener">Pricing overview</a></td></tr>
+    <tr><td>LKE HA control plane${rmarks('lkeHA')}</td><td class="num">from ${rv('lkeHA')} / cluster / month</td><td><a href="${SRC.lke.u}" target="_blank" rel="noopener">LKE pricing</a></td></tr>
+    <tr><td>LKE Enterprise${rmarks('lkeEnt')}</td><td class="num">${rv('lkeEnt')} / cluster / month</td><td><a href="${SRC.lke.u}" target="_blank" rel="noopener">LKE pricing</a></td></tr>
+    <tr><td>NodeBalancer${rmarks('nbBasicMo')}</td><td class="num">${rv('nbBasicMo')} / month, no data processing charge</td><td><a href="${SRC.nb.u}" target="_blank" rel="noopener">NodeBalancer pricing</a></td></tr>
+    <tr><td>Premium NodeBalancer${rmarks('nbPremiumHr','nbPremiumPerGB')}</td><td class="num">${rv('nbPremiumHr')} / hour + ${rv('nbPremiumPerGB')} / GB processed</td><td><a href="${SRC.nb.u}" target="_blank" rel="noopener">NodeBalancer pricing</a></td></tr>
+    <tr><td>Object Storage${rmarks('objBase','objIncludedGB','objPerGB','objPoolTB')}</td><td class="num">${rv('objBase')} / month incl. ${RB.objIncludedGB.value} GB, then ${rv('objPerGB')} / GB; +${RB.objPoolTB.value} TB transfer pool</td><td><a href="${SRC.obj.u}" target="_blank" rel="noopener">Object Storage pricing</a></td></tr>
+    <tr><td>Block Storage${rmarks('blockPerGB')}</td><td class="num">$${(+RB.blockPerGB.value).toFixed(2)} / GB / month</td><td><a href="${SRC.block.u}" target="_blank" rel="noopener">Block Storage</a></td></tr>
+    <tr><td>Outbound transfer overage${rmarks('egressPerGB')}</td><td class="num">${rv('egressPerGB')} / GB (core regions)</td><td><a href="${SRC.xfer.u}" target="_blank" rel="noopener">Network transfer</a></td></tr>
+    <tr><td>Linode Managed${rmarks('managedPerInstance')}</td><td class="num">${rv('managedPerInstance')} / instance / month</td><td><a href="${SRC.svc.u}" target="_blank" rel="noopener">Pricing overview</a></td></tr>
   </tbody></table></div></div>
-  <div class="card"><div class="shrow"><h3>Managed databases</h3><a href="${SRC.db.u}" target="_blank" rel="noopener">${esc(SRC.db.t)}</a></div><div class="tablewrap"><table><thead><tr><th>Plan</th><th class="r">1 node</th><th class="r">2 nodes</th><th class="r">3 nodes</th></tr></thead><tbody>${Object.entries(DBPLANS).filter(([k])=>k!=='none').map(([k,d]) => `<tr><td>${esc(d.name)}</td>${[1,2,3].map(n => `<td class="r num">${d.p[n]!=null?'$'+d.p[n].toLocaleString('en-US',{minimumFractionDigits:2}):'—'}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+  <div class="card"><div class="shrow"><h3>Managed databases</h3><a href="${SRC.db.u}" target="_blank" rel="noopener">${esc(SRC.db.t)}</a></div><div class="tablewrap"><table><thead><tr><th>Plan</th><th class="r">1 node</th><th class="r">2 nodes</th><th class="r">3 nodes</th></tr></thead><tbody>${Object.entries(DBPLANS).filter(([k])=>k!=='none').map(([k,d]) => `<tr><td>${esc(d.name)}${marks(d)}</td>${[1,2,3].map(n => `<td class="r num">${d.p[n]!=null?'$'+d.p[n].toLocaleString('en-US',{minimumFractionDigits:2}):'—'}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
 
 // ---------- views ----------
 const VIEWS = ['planner','library','method','prices'];
