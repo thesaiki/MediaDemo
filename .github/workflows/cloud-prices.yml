@@ -1,0 +1,132 @@
+name: Cloud calculator prices
+
+# Daily at 11:00 America/New_York. GitHub cron is UTC only, so both 15:00 UTC
+# (EDT) and 16:00 UTC (EST) are scheduled and the gate step keeps the one that
+# lands on 11:00 local time.
+on:
+  schedule:
+    - cron: '0 15 * * *'
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: cloud-prices
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Gate on 11:00 New York time
+        id: gate
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          hour=$(TZ=America/New_York date +%H)
+          if [ "$hour" = "11" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "It is ${hour}:xx in New York, not 11; skipping this trigger."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.run == 'true'
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.run == 'true'
+        with:
+          node-version: 22
+
+      - name: Sync prices from the public pricing API
+        id: sync
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          set -o pipefail
+          node tools/cloud-calculator/sync/sync-prices.mjs --summary "$RUNNER_TEMP/price-summary.md" 2>&1 | tee "$RUNNER_TEMP/price-sync.log"
+
+      - name: Test
+        if: steps.sync.outputs.changed == 'true'
+        run: npm test
+
+      - name: Build the calculator page
+        if: steps.sync.outputs.changed == 'true'
+        run: node tools/cloud-calculator/build.mjs dist/cloud-calculator/index.html
+
+      - name: Commit and push prices.json
+        id: commit
+        if: steps.sync.outputs.changed == 'true'
+        run: |
+          day=$(TZ=America/New_York date +%F)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/cloud-calculator/src/prices.json
+          git commit -m "chore(akamai): sync cloud prices ${day}"
+          git push origin HEAD:main
+          echo "day=${day}" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy the calculator page
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          for v in DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS DEPLOY_HOST; do
+            if [ -z "${!v}" ]; then echo "::error::secret $v is not set"; exit 1; fi
+          done
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+          # The key is restricted server-side with rrsync rooted at /var/www/mediademo,
+          # so the remote path is relative to that directory.
+          rsync -v --checksum \
+            -e "ssh -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts" \
+            dist/cloud-calculator/index.html "deploy@${DEPLOY_HOST}:cloud-calculator/index.html"
+          rm -f ~/.ssh/deploy_key
+
+      - name: Open an issue with the price changes
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            cat "$RUNNER_TEMP/price-summary.md"
+            echo
+            echo "Committed to main as ${{ steps.commit.outputs.sha }} and deployed to cloudcalculator.fde-demo.com."
+            echo "Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          } > "$RUNNER_TEMP/issue.md"
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "Cloud prices updated ${{ steps.commit.outputs.day }}" \
+            --body-file "$RUNNER_TEMP/issue.md"
+
+      - name: Open an issue when the sync is blocked
+        if: failure() && steps.sync.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            if [ -s "$RUNNER_TEMP/price-summary.md" ]; then cat "$RUNNER_TEMP/price-summary.md"; else echo "The price sync failed before writing a summary."; fi
+            echo
+            echo "<details><summary>Sync output</summary>"
+            echo
+            echo '```'
+            tail -n 200 "$RUNNER_TEMP/price-sync.log" 2>/dev/null || echo "(no log)"
+            echo '```'
+            echo "</details>"
+            echo
+            echo "Nothing was committed or deployed. Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          } > "$RUNNER_TEMP/issue.md"
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "Cloud price sync blocked $(TZ=America/New_York date +%F)" \
+            --body-file "$RUNNER_TEMP/issue.md"
