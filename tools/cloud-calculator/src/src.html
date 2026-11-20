@@ -89,6 +89,17 @@ details.sec>summary .sec-total{margin-left:auto;font:500 .85rem var(--f-mono);co
 .ctl input[type=number]{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .ctl .suf{padding-right:10px;color:var(--muted);font-size:.76rem;white-space:nowrap}
 .fld .hint{font-size:.74rem;color:var(--muted);line-height:1.35}
+.bs{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:99px;font:600 .64rem/1.25 var(--f-body);letter-spacing:.02em;vertical-align:1px;white-space:nowrap}
+.bs-price{background:var(--good-bg);color:var(--good)}
+.bs-bench,.bs-vendor{background:var(--accent-soft);color:var(--accent)}
+.bs-choice{background:var(--sunk);color:var(--muted)}
+.bs-assumed{background:var(--warn-bg);color:var(--warn)}
+.bs-user{background:var(--media-soft);color:var(--media)}
+.fld .basis{font-size:.72rem;color:var(--muted);line-height:1.35;border-left:2px solid var(--line-strong);padding-left:6px}
+#form.nobasis .basis{display:none}
+.basisbar{display:flex;flex-wrap:wrap;gap:6px 4px;align-items:center;font-size:.8rem;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.basisbar label{display:flex;align-items:center;gap:6px;font-weight:600;color:var(--ink);margin-right:8px}
+.basisbar .bs{margin-left:0}
 .derived{display:flex;flex-wrap:wrap;gap:6px 18px;background:var(--sunk);border-radius:var(--r);padding:10px 12px;font-size:.8rem;color:var(--muted)}
 .derived b{color:var(--ink);font-family:var(--f-mono);font-weight:500}
 
@@ -166,6 +177,14 @@ textarea#io{width:100%;min-height:140px;font:12px/1.45 var(--f-mono);border:1px 
 .uc dt{font-weight:600;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .uc dd{margin:2px 0 0}
 .uc ul{margin:2px 0 0;padding-left:18px}
+.uc details.assume{font-size:.8rem}
+.uc details.assume>summary{cursor:pointer;font-weight:600;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.uc details.assume>summary span{text-transform:none;letter-spacing:0;font-weight:500}
+.uc ul.assume{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:8px}
+.uc ul.assume li{border-left:2px solid var(--line-strong);padding-left:8px}
+.uc ul.assume .al{font-weight:600}
+.uc ul.assume .av{font-family:var(--f-mono);font-size:.76rem}
+.uc ul.assume .an{display:block;color:var(--muted);font-size:.76rem;margin-top:2px}
 .uc .foot{margin-top:auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding-top:10px;border-top:1px solid var(--line)}
 .uc .est{font:500 .95rem var(--f-mono)}
 .uc .est small{display:block;font:500 .7rem var(--f-body);color:var(--muted)}
@@ -253,7 +272,7 @@ footer .wrap{padding-block:18px 28px;display:grid;gap:6px}
         <button type="button" data-f="all" aria-pressed="true">All 17</button><button type="button" data-f="AI" aria-pressed="false">AI workloads</button><button type="button" data-f="Media" aria-pressed="false">Media AI</button>
       </div>
     </div>
-    <p class="intro">Ten AI workloads mapped to Linode building blocks, plus seven Media AI workloads. Each loads a full scenario with illustrative volumes. Replace them with numbers from your pilot or benchmark before using a figure in a proposal.</p>
+    <p class="intro">Ten AI workloads mapped to Linode building blocks, plus seven Media AI workloads. Each loads a full scenario with illustrative volumes. Replace them with numbers from your pilot or benchmark before using a figure in a proposal. Open “Assumptions and sources” on a card to see what each value rests on.</p>
     <div class="libgrid" id="lib"></div>
   </section>
 
@@ -300,20 +319,92 @@ function money(n){
 const qty = n => !isFinite(n) ? '—' : (Math.abs(n) >= 100 ? Math.round(n).toLocaleString('en-US') : (+n.toFixed(2)).toLocaleString('en-US'));
 const compact = n => n >= 1e9 ? (n/1e9).toFixed(2)+'B' : n >= 1e6 ? (n/1e6).toFixed(2)+'M' : n >= 1e4 ? (n/1e3).toFixed(1)+'k' : qty(n);
 
-let state, presetId;
+let state, presetId, presetSnap = null; // presetSnap: untouched copy of the loaded use case, for source notes
+const snapOf = id => { const uc = USE_CASES.find(u => u.id === id); return uc ? uc.s() : null; };
 function loadPreset(id){
   const uc = USE_CASES.find(u => u.id === id) || USE_CASES[0];
-  presetId = uc.id; state = uc.s(); state.useCase = uc.id;
+  presetId = uc.id; state = uc.s(); state.useCase = uc.id; presetSnap = uc.s();
 }
 try{
   const saved = JSON.parse(localStorage.getItem(LS) || 'null');
-  if(saved && saved.workload){ state = Object.assign(base(), saved); presetId = saved.useCase || 'support'; }
+  if(saved && saved.workload){ state = Object.assign(base(), saved); presetId = saved.useCase || 'support'; presetSnap = snapOf(saved.useCase); }
 }catch(e){}
 if(!state) loadPreset('support');
 function persist(){ try{ localStorage.setItem(LS, JSON.stringify(state)); }catch(e){} }
 
 const getP = (o,p) => p.split('.').reduce((a,k) => a == null ? a : a[k], o);
 function setP(o,p,v){ const ks = p.split('.'); let t = o; ks.slice(0,-1).forEach(k => t = t[k]); t[ks[ks.length-1]] = v; }
+
+// ---------- source notes ----------
+const BASIS_LS = 'linode-ai-media-planner-basis';
+let showBasis = true;
+try{ showBasis = localStorage.getItem(BASIS_LS) !== 'off'; }catch(e){}
+const FIELD_LABELS = {
+  'workload.users':'Active users or sources','workload.tasksPerDay':'{U}s per user per day','workload.activeDays':'Active days / month',
+  'workload.callsPerTask':'Model calls per {u}','workload.retryPct':'Retry and rework overhead','workload.inTok':'Input tokens per call',
+  'workload.outTok':'Output tokens per call','workload.activeHours':'Active hours per day','workload.peakFactor':'Peak-to-average ratio',
+  'workload.mediaHours':'Media hours / month','serving.profile':'Serving profile','serving.plan':'GPU plan',
+  'serving.prefillTps':'Prefill throughput','serving.decodeTps':'Decode throughput','serving.utilization':'Target utilization',
+  'serving.provisioning':'Provisioning','serving.minReplicas':'Minimum replicas','serving.hours':'Hours on / month',
+  'routing.linodeShare':'Calls served on Linode','api.inRate':'External API input rate','api.outRate':'External API output rate',
+  'platform.lke':'Kubernetes control plane','platform.nbBasic':'NodeBalancers','platform.nbPremium':'Premium NodeBalancers',
+  'platform.nbPremiumGB':'Premium NB processed','platform.objGB':'Object Storage','platform.blockGB':'Block Storage',
+  'platform.db':'Managed database','platform.dbNodes':'Database nodes','platform.mgmt':'Linode Managed instances',
+  'network.egressTB':'Outbound transfer','finance.reservePct':'Planning reserve','finance.horizon':'Horizon',
+  'stages.*.plan':'plan','stages.*.count':'instances','stages.*.hours':'hours / month','stages.*.concurrent':'concurrent units',
+  'stages.*.perInstance':'capacity per instance','stages.*.units':'work units / month','stages.*.rate':'units per instance-hour',
+  'stages.*.util':'achieved utilization','custom.*.amount':'amount'
+};
+const generic = p => p.replace(/\.\d+\./, '.*.');
+const itemOf = (s, p) => { const m = /^(stages|custom)\.(\d+)\./.exec(p); return m ? (s[m[1]] || [])[+m[2]] : null; };
+function labelOf(p, s){
+  const u = s.unit || 'task';
+  const l = (FIELD_LABELS[generic(p)] || p).replace('{U}', u.charAt(0).toUpperCase() + u.slice(1)).replace('{u}', u);
+  const it = itemOf(s, p);
+  return it ? `${it.label || 'Line'}: ${l}` : l;
+}
+const PROV = {always:'Always-on, sized for peak', elastic:'Elastic, pay per instance-hour'};
+const LKE = {none:'None or standard LKE', ha:'LKE HA control plane', enterprise:'LKE Enterprise'};
+function fmtVal(p, v, s){
+  if(v == null) return '—';
+  const g = generic(p);
+  if(g === 'serving.plan' || g === 'stages.*.plan') return PLANS[v] ? PLANS[v].name : String(v);
+  if(p === 'platform.db') return DBPLANS[v] ? DBPLANS[v].name : String(v);
+  if(p === 'serving.profile') return PROFILES[v] ? PROFILES[v].label : String(v);
+  if(p === 'serving.provisioning') return PROV[v] || String(v);
+  if(p === 'platform.lke') return LKE[v] || String(v);
+  const n = +v, f = x => (+x).toLocaleString('en-US', {maximumFractionDigits: 2});
+  if(!isFinite(n)) return String(v);
+  if(['serving.utilization','stages.*.util'].includes(g)) return Math.round(n * 100) + '%';
+  if(['workload.retryPct','routing.linodeShare','finance.reservePct'].includes(g)) return f(n) + '%';
+  if(['api.inRate','api.outRate'].includes(g)) return '$' + f(n) + '/M tokens';
+  if(g === 'custom.*.amount') return '$' + f(n);
+  const it = s && itemOf(s, p), ul = (it && it.unitLabel) || 'units';
+  const suf = {'workload.inTok':' tokens','workload.outTok':' tokens','serving.prefillTps':' tok/s','serving.decodeTps':' tok/s',
+    'serving.hours':' h','stages.*.hours':' h','platform.objGB':' GB','platform.blockGB':' GB','platform.nbPremiumGB':' GB/mo',
+    'network.egressTB':' TB/mo','finance.horizon':' months','stages.*.units':' '+ul,'stages.*.concurrent':' '+ul,
+    'stages.*.perInstance':' '+ul,'stages.*.rate':' '+ul+' per instance-hour'}[g] || '';
+  return f(n) + suf;
+}
+// Source of the value now in the form: the preset's note while it is unchanged, "Your value" after an edit.
+function basisNow(p){
+  const v = getP(state, p);
+  if(v === undefined) return null;
+  let pv = presetSnap ? getP(presetSnap, p) : undefined;
+  const a = itemOf(state, p), b = presetSnap && itemOf(presetSnap, p);
+  if(a && (!b || a.label !== b.label)) pv = undefined; // a stage or line moved, was added or renamed
+  if(pv !== undefined && String(pv) === String(v)) return basisFor(presetId, p, presetSnap);
+  return {k:'user', n: pv === undefined ? 'Not part of the selected use case.' : `Changed from the use-case value (${fmtVal(p, pv, presetSnap)}).`};
+}
+const badge = (b, id) => `<span class="bs bs-${b.k}"${id?` id="bs-${id}"`:''} title="${esc(b.n)}">${BASIS_KINDS[b.k]}</span>`;
+function paintBasis(){
+  document.querySelectorAll('#form [data-k]').forEach(el => {
+    const bs = document.getElementById('bs-' + el.id); if(!bs) return;
+    const b = basisNow(el.dataset.k) || {k:'user', n:''};
+    bs.className = 'bs bs-' + b.k; bs.textContent = BASIS_KINDS[b.k]; bs.title = b.n;
+    const bn = document.getElementById('bn-' + el.id); if(bn) bn.textContent = b.n;
+  });
+}
 
 // ---------- form builders ----------
 let fid = 0;
@@ -331,7 +422,8 @@ function fld(path, label, o = {}){
   } else {
     ctl = `<input id="${id}" data-k="${path}" type="number" inputmode="decimal" step="${o.step ?? 'any'}" min="${o.min ?? 0}"${o.max!=null?` max="${o.max}"`:''} value="${v ?? 0}">`;
   }
-  return `<label class="fld"${o.wide?' style="grid-column:1/-1"':''}><span class="lab">${label}</span><span class="ctl">${ctl}${o.suf?`<span class="suf">${o.suf}</span>`:''}</span>${o.hint?`<span class="hint">${o.hint}</span>`:''}</label>`;
+  const b = o.text || o.nobasis ? null : basisNow(path);
+  return `<label class="fld"${o.wide?' style="grid-column:1/-1"':''}><span class="lab">${label}${b?badge(b,id):''}</span><span class="ctl">${ctl}${o.suf?`<span class="suf">${o.suf}</span>`:''}</span>${o.hint?`<span class="hint">${o.hint}</span>`:''}${b?`<span class="basis" id="bn-${id}">${esc(b.n)}</span>`:''}</label>`;
 }
 // Plans grouped by product line (first-seen order), cheapest first within a line.
 function planLines(entries){
@@ -350,18 +442,20 @@ function stageHTML(st, i){
   if(st.method === 'fixed') m = fld(p+'.count','Instances',{step:1,suf:'nodes'}) + fld(p+'.hours','Hours / month',{step:1,suf:'h',hint:'730 = always on'});
   else if(st.method === 'live') m = fld(p+'.concurrent',`Concurrent ${esc(st.unitLabel||'units')}`,{step:1}) + fld(p+'.perInstance','Capacity per instance',{step:'any',suf:esc(st.unitLabel||'units'),hint:'From your benchmark'}) + fld(p+'.hours','Hours / month',{step:1,suf:'h'}) + fld(p+'.unitLabel','Unit name',{text:true});
   else m = fld(p+'.units','Work units / month',{step:'any',suf:esc(st.unitLabel||'units')}) + fld(p+'.rate','Units per instance-hour',{step:'any',hint:'Throughput of one instance'}) + fld(p+'.util','Achieved utilization',{step:.05,max:.99,hint:'0.8 = 80%'}) + fld(p+'.unitLabel','Unit name',{text:true});
-  return `<div class="stage"><div class="top">${fld(p+'.label','Stage',{text:true})}${fld(p+'.plan','Plan',{groups:planOpts()})}${fld(p+'.method','Sizing method',{options:[['fixed','Fixed fleet'],['live','Live concurrency'],['batch','Batch throughput']]})}<button class="btn ghost" type="button" data-rmstage="${i}" aria-label="Remove stage">Remove</button></div><div class="grid">${m}</div></div>`;
+  return `<div class="stage"><div class="top">${fld(p+'.label','Stage',{text:true})}${fld(p+'.plan','Plan',{groups:planOpts()})}${fld(p+'.method','Sizing method',{nobasis:true,options:[['fixed','Fixed fleet'],['live','Live concurrency'],['batch','Batch throughput']]})}<button class="btn ghost" type="button" data-rmstage="${i}" aria-label="Remove stage">Remove</button></div><div class="grid">${m}</div></div>`;
 }
 function customHTML(c, i){
   const p = `custom.${i}`;
-  return `<div class="grid" style="grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) auto;align-items:end">${fld(p+'.label','Line',{text:true})}${fld(p+'.amount','Amount',{step:'any',suf:'USD'})}${fld(p+'.kind','Timing',{options:[['recurring','Per month'],['onetime','One-time']]})}<button class="btn ghost" type="button" data-rmcustom="${i}">Remove</button></div>`;
+  return `<div class="grid" style="grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) auto;align-items:end">${fld(p+'.label','Line',{text:true})}${fld(p+'.amount','Amount',{step:'any',suf:'USD'})}${fld(p+'.kind','Timing',{nobasis:true,options:[['recurring','Per month'],['onetime','One-time']]})}<button class="btn ghost" type="button" data-rmcustom="${i}">Remove</button></div>`;
 }
 
 function renderForm(){
   const s = state;
   const unit = esc(s.unit || 'task');
   const Unit = unit.charAt(0).toUpperCase() + unit.slice(1);
+  const legend = Object.keys(BASIS_KINDS).map(k => `<span class="bs bs-${k}">${BASIS_KINDS[k]}</span>`).join('');
   const html = [
+    `<div class="basisbar"><label><input type="checkbox" id="basis-on"${showBasis?' checked':''}> Show where each value comes from</label>${legend}</div>`,
     sec('demand','Demand to model calls','tokens',
       `<p class="intro">Translate business activity into model calls. One ${unit} can involve several calls (retrieval, tools, retries, judges). Set users to 0 for pure media pipelines with no LLM step.</p>
        <div class="grid">
@@ -416,6 +510,7 @@ function renderForm(){
        <div class="grid">${fld('finance.reservePct','Planning reserve',{step:1,suf:'%'})}${fld('finance.horizon','Horizon',{step:1,suf:'months'})}</div>`)
   ].join('');
   $('#form').innerHTML = html;
+  $('#form').classList.toggle('nobasis', !showBasis);
   $('#f-name').value = s.name || '';
   $('#preset').value = presetId;
   recalc();
@@ -425,6 +520,7 @@ function renderForm(){
 function recalc(){
   const r = calc(state);
   persist();
+  paintBasis();
   const unit = esc(state.unit || 'task');
   document.querySelectorAll('[data-route]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.route === +state.routing.linodeShare)));
   const linodeShare = +state.routing.linodeShare || 0;
@@ -533,6 +629,12 @@ document.addEventListener('click', e => {
   else if(t.dataset.f){ document.querySelectorAll('[data-f]').forEach(b => b.setAttribute('aria-pressed', String(b===t))); document.querySelectorAll('.uc').forEach(c => c.hidden = !(t.dataset.f==='all' || c.dataset.group===t.dataset.f)); }
 });
 $('#preset').addEventListener('change', e => { loadPreset(e.target.value); renderForm(); });
+$('#form').addEventListener('change', e => {
+  if(e.target.id !== 'basis-on') return;
+  showBasis = e.target.checked;
+  $('#form').classList.toggle('nobasis', !showBasis);
+  try{ localStorage.setItem(BASIS_LS, showBasis ? 'on' : 'off'); }catch(err){ /* storage blocked: the choice lasts for this visit */ }
+});
 $('#f-name').addEventListener('input', e => { state.name = e.target.value; persist(); });
 
 function say(m){ const t = $('#toast'); t.textContent = m; clearTimeout(say.t); say.t = setTimeout(() => t.textContent = '', 3500); }
@@ -555,7 +657,7 @@ $('#b-load').addEventListener('click', () => {
   try{
     const o = JSON.parse($('#io').value);
     if(!o.workload || !o.serving) throw new Error('missing workload or serving block');
-    state = Object.assign(base(), o); presetId = o.useCase || presetId; renderForm(); say('Scenario loaded');
+    state = Object.assign(base(), o); presetId = o.useCase || presetId; presetSnap = snapOf(o.useCase); renderForm(); say('Scenario loaded');
   }catch(err){ say('Could not load: ' + err.message + '. Paste JSON produced by “Copy scenario JSON”.'); }
 });
 $('#b-reset').addEventListener('click', () => { loadPreset(presetId); renderForm(); say('Reset to the use-case defaults'); });
@@ -564,7 +666,12 @@ $('#b-reset').addEventListener('click', () => { loadPreset(presetId); renderForm
 $('#preset').innerHTML = ['AI','Media'].map(g => `<optgroup label="${g==='AI'?'AI workloads':'Media AI'}">${USE_CASES.filter(u=>u.group===g).map(u=>`<option value="${u.id}">${esc(u.title)}</option>`).join('')}</optgroup>`).join('');
 
 $('#lib').innerHTML = USE_CASES.map(u => {
-  const r = calc(u.s());
+  const snap = u.s();
+  const r = calc(snap);
+  const items = scenarioPaths(snap).map(p => [p, basisFor(u.id, p, snap)]).filter(x => x[1]);
+  const count = k => items.filter(x => x[1].k === k).length;
+  const tally = [['assumed','assumptions'],['choice','planning choices'],['price','published prices'],['bench','benchmark'],['vendor','vendor rating']]
+    .map(([k,w]) => count(k) ? `${count(k)} ${w}` : '').filter(Boolean).join(' · ');
   return `<article class="uc" data-group="${u.group}">
     <div class="meta"><span class="chip ${u.group==='Media'?'media':'info'}">${u.group==='Media'?'Media AI':'AI workload'}</span><span class="chip" style="background:var(--sunk);color:var(--muted)">${esc(u.unitMetric)}</span></div>
     <h3>${esc(u.title)}</h3><p>${esc(u.summary)}</p>
@@ -574,6 +681,9 @@ $('#lib').innerHTML = USE_CASES.map(u => {
       <div><dt>Watch out</dt><dd>${esc(u.watch)}</dd></div>
       <div><dt>Retry safety (idempotency key)</dt><dd>${esc(u.idem)}</dd></div>
     </dl>
+    <details class="assume"><summary>Assumptions and sources <span>(${tally})</span></summary>
+      <ul class="assume">${items.map(([p,b]) => `<li><span class="al">${esc(labelOf(p, snap))}</span> <span class="av">${esc(fmtVal(p, getP(snap, p), snap))}</span>${badge(b)}<span class="an">${esc(b.n)}</span></li>`).join('')}</ul>
+    </details>
     <div class="foot"><span class="est">${money(r.budget)}<small>illustrative monthly budget</small></span><button class="btn primary" type="button" data-load="${u.id}">Open in planner</button></div>
   </article>`;
 }).join('');
@@ -612,6 +722,16 @@ Monthly planning budget = operating cost × (1 + reserve %)
 Year 1 cash             = one-time lines + 12 × planning budget
 Horizon cash            = one-time lines + horizon months × planning budget
 Cost per unit           = operating cost ÷ units per month (before reserve)</pre>
+<h3>Where the numbers come from</h3>
+<p>Every value in a use case carries a source label. The planner shows it next to each field (untick “Show where each value comes from” to hide the notes), and each library card lists them under “Assumptions and sources”.</p>
+<ul>
+<li><span class="bs bs-price">Published price</span> Plan and service prices from the public Akamai Cloud pricing API, refreshed daily, or kept by hand from the Akamai pricing pages where the API does not list them (marked “manual” in the price book).</li>
+<li><span class="bs bs-bench">Akamai benchmark</span> A figure from Akamai’s published RTX PRO 6000 Blackwell test.</li>
+<li><span class="bs bs-vendor">Vendor rating</span> Derived from a published hardware rating, such as the Quadra T1U’s 32× 1080p30.</li>
+<li><span class="bs bs-choice">Planning choice</span> A design decision for the use case, such as replicas, utilization targets, routing or the calendar. Not a measurement.</li>
+<li><span class="bs bs-assumed">Assumption</span> Illustrative volumes, token counts and throughput. Replace them with logs, a pilot or a benchmark before using a figure in a proposal.</li>
+<li><span class="bs bs-user">Your value</span> A field changed from the use-case value.</li>
+</ul>
 <h3>Retries are a cost line</h3>
 <p>Every duplicate job is billed GPU or VPU time. The retry field shows the cost of rework; idempotency keys are how you reduce it. Each library entry names a key, where it is stored, how long it lives and what a duplicate request receives. The general pattern: derive the key from the business identity plus a version (asset_id + rendition profile + model version), store it with a unique constraint or a Valkey SET NX, keep it at least as long as your queue’s redelivery window, and return the first result for any duplicate.</p>
 <h3>What this planner does not do</h3>

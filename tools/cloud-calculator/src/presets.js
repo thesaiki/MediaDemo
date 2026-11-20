@@ -320,4 +320,228 @@ const USE_CASES = [
   }
 ];
 
-if (typeof module !== 'undefined') module.exports = { USE_CASES, base, merge };
+// ---------- Where each preset value comes from ----------
+// basisFor(useCaseId, path) says what a preset value rests on: a published price, an Akamai
+// benchmark, a vendor rating, a planning choice, or an assumption to replace with measured data.
+// Notes describe the preset value only; once a user changes a field the planner shows "Your value".
+const BASIS_KINDS = {
+  price: 'Published price', bench: 'Akamai benchmark', vendor: 'Vendor rating',
+  choice: 'Planning choice', assumed: 'Assumption', user: 'Your value'
+};
+const MEASURE = ' Benchmark it before using the figure.';
+const GENERIC_BASIS = {
+  'workload.users': ['assumed', 'Illustrative volume, not customer data. Use the number of active users, or 1 for a single machine queue.'],
+  'workload.tasksPerDay': ['assumed', 'Illustrative volume. Take it from usage logs or a pilot.'],
+  'workload.activeDays': ['choice', 'Calendar convention: 22 working days, or 30 for work that runs every day.'],
+  'workload.callsPerTask': ['assumed', 'Illustrative. Count model calls per unit in a trace of the real flow, including retrieval, tools and judges.'],
+  'workload.retryPct': ['assumed', 'Illustrative. Measure failed and repeated calls in a pilot.'],
+  'workload.inTok': ['assumed', 'Illustrative. Measure from request logs: system prompt, history, retrieved context and image tokens.'],
+  'workload.outTok': ['assumed', 'Illustrative. Measure from response logs, counting reasoning tokens once.'],
+  'workload.activeHours': ['assumed', 'Illustrative. Hours per day when the load runs.'],
+  'workload.peakFactor': ['assumed', 'Illustrative. Busiest hour ÷ average active hour, from traffic history.'],
+  'workload.mediaHours': ['assumed', 'Illustrative. Only used to report cost per media hour.'],
+  'routing.linodeShare': ['choice', 'Routing chosen for this use case. The Model routing buttons change it.'],
+  'serving.profile': ['choice', 'Model size and GPU chosen for this use case.'],
+  'serving.prefillTps': ['assumed', 'Assumed for this profile, not measured.' + MEASURE],
+  'serving.decodeTps': ['assumed', 'Assumed for this profile, not measured.' + MEASURE],
+  'serving.utilization': ['choice', 'Planning target that leaves headroom for latency at peak. Not measured.'],
+  'serving.provisioning': ['choice', 'Chosen for this use case: always-on for interactive traffic, elastic for queues and batches.'],
+  'serving.minReplicas': ['choice', 'Availability floor chosen for this use case.'],
+  'serving.hours': ['choice', '730 h is the planning month (always on).'],
+  'api.inRate': ['assumed', 'Placeholder rate for an external frontier model. Use the contracted rate. Only applies to calls not served on Linode.'],
+  'api.outRate': ['assumed', 'Placeholder rate for an external frontier model. Use the contracted rate. Only applies to calls not served on Linode.'],
+  'platform.lke': ['choice', 'Chosen for this use case. The control-plane price comes from the LKE price list.'],
+  'platform.nbBasic': ['choice', 'Count chosen for this use case. The price comes from the NodeBalancer price list.'],
+  'platform.nbPremium': ['choice', 'Count chosen for this use case. The price comes from the NodeBalancer price list.'],
+  'platform.nbPremiumGB': ['assumed', 'Illustrative processed volume.'],
+  'platform.objGB': ['assumed', 'Illustrative size. Size it from the customer’s data and retention.'],
+  'platform.blockGB': ['assumed', 'Illustrative size. Size it from the customer’s data and retention.'],
+  'platform.dbNodes': ['choice', 'Node count chosen for this use case.'],
+  'platform.mgmt': ['choice', 'Count chosen for this use case.'],
+  'network.egressTB': ['assumed', 'Illustrative outbound volume. Take it from current bandwidth bills or CDN origin traffic.'],
+  'finance.reservePct': ['choice', 'Contingency for estimate error, not a price.'],
+  'finance.horizon': ['choice', 'Planning horizon for total cash.'],
+  'stages.*.count': ['choice', 'Fleet size chosen for this use case.'],
+  'stages.*.hours': ['choice', '730 h is the planning month (always on).'],
+  'stages.*.concurrent': ['assumed', 'Illustrative concurrency.'],
+  'stages.*.perInstance': ['assumed', 'Capacity per instance, not measured.' + MEASURE],
+  'stages.*.units': ['assumed', 'Illustrative monthly volume.'],
+  'stages.*.rate': ['assumed', 'Throughput per instance-hour, not measured.' + MEASURE],
+  'stages.*.util': ['choice', 'Planning target for packing batch work into billed hours. Not measured.'],
+  'custom.*.amount': ['assumed', 'Placeholder amount, not a quote.']
+};
+// Per-use-case notes. A plain string is an assumption; [kind, note] sets the kind.
+// On a plan or database field the note is added after the price source.
+const PRESET_BASIS = {
+  support: {
+    'workload.users': '1,000 cases a day, entered as 1,000 users × 1 case. Illustrative.',
+    'workload.callsPerTask': 'Six model calls per case: several turns plus retrieval and tool calls. Illustrative.',
+    'workload.inTok': '3,000 tokens per call, growing with conversation history. Illustrative.',
+    'serving.minReplicas': ['choice', 'Two replicas, so one can fail or be updated without an outage.'],
+    'stages.0.count': ['choice', 'Two app nodes for redundancy.'],
+    'custom.0.amount': 'Placeholder for a one-time integration project, not a quote.'
+  },
+  rag: {
+    'workload.users': '1,500 employees. Illustrative.',
+    'workload.tasksPerDay': 'Eight questions per employee per working day. Illustrative.',
+    'workload.callsPerTask': '1.2 calls per question: one generation call, plus a follow-up or rewritten query on about one question in five. Illustrative.',
+    'workload.inTok': '4,000 input tokens: the question, a system prompt and the retrieved chunks, which make up most of it. Fewer or smaller chunks cut GPU time almost one-for-one. Illustrative.',
+    'workload.outTok': 'A 500-token answer with citations. Illustrative.',
+    'workload.activeHours': 'Nine office hours a day. Illustrative.',
+    'workload.peakFactor': 'Busiest hour 2.5× the average, such as a morning peak. Illustrative.',
+    'stages.0.units': '50,000 pages re-embedded a month for documents that changed. A first full indexing is a separate one-time job. Illustrative.',
+    'stages.0.rate': '20,000 pages per GPU-hour for a small embedding model, not measured. Benchmark it on a sample of the documents.',
+    'platform.db': 'Holds chunk text and pgvector embeddings; sized by hand, not from document counts.',
+    'platform.dbNodes': ['choice', 'Two nodes chosen for availability.'],
+    'platform.objGB': '500 GB for source documents. Illustrative.',
+    'platform.blockGB': '200 GB of volumes for the app tier. Illustrative.',
+    'network.egressTB': '0.3 TB of answers and UI traffic a month. Illustrative.'
+  },
+  docs: {
+    'workload.tasksPerDay': '3,000 documents a day from one queue (users = 1). Illustrative.',
+    'workload.callsPerTask': 'Two extraction calls per document. Illustrative.',
+    'stages.0.units': '270,000 pages a month = 3,000 documents × 30 days × 3 pages. Illustrative.',
+    'stages.0.rate': '3,000 pages per instance-hour for CPU OCR, not measured.' + MEASURE,
+    'custom.0.amount': 'Placeholder for people handling exceptions, not a quote.'
+  },
+  agents: {
+    'workload.tasksPerDay': 'Five workflows per user per working day. Illustrative.',
+    'workload.callsPerTask': '12 calls per workflow: planning, tool steps and validation. Illustrative.',
+    'workload.retryPct': '15% rework, higher than chat because failed steps are retried. Illustrative.',
+    'workload.inTok': '6,000 tokens per call as tool results accumulate. Illustrative.',
+    'routing.linodeShare': ['choice', '80% served on Linode, 20% escalated to an external frontier model.'],
+    'stages.0.count': ['choice', 'Four sandbox workers for tool execution.']
+  },
+  coding: {
+    'workload.users': '150 engineers. Illustrative.',
+    'workload.inTok': '12,000 tokens of repository context per call. Illustrative.',
+    'routing.linodeShare': ['choice', '70% served on Linode, 30% sent to an external model for hard tasks.'],
+    'stages.0.count': ['choice', 'Three CI runners.']
+  },
+  batch: {
+    'workload.tasksPerDay': '20,000 items a day from one queue (users = 1). Illustrative.',
+    'workload.outTok': '150 tokens of labels or summary, so the load is mostly prefill. Illustrative.',
+    'workload.activeHours': ['choice', '24 h: the queue runs around the clock with no live users.']
+  },
+  voice: {
+    'workload.tasksPerDay': '4,000 recorded calls a day. Illustrative.',
+    'workload.callsPerTask': 'Two LLM calls per conversation: summary and QA score. Illustrative.',
+    'workload.mediaHours': '12,000 audio hours a month = 120,000 calls × 6 minutes on average. Illustrative.',
+    'stages.0.units': 'The same 12,000 audio hours, transcribed once.',
+    'stages.0.rate': '25 audio hours per GPU-hour (25× real time) for Whisper-class ASR, not measured.' + MEASURE
+  },
+  vision: {
+    'workload.tasksPerDay': '50,000 images a day. Illustrative.',
+    'workload.inTok': '1,500 tokens including the image. Image tokens depend on resolution and the model; measure them on real samples.',
+    'workload.outTok': 'A 100-token verdict. Illustrative.'
+  },
+  regional: {
+    'workload.peakFactor': 'Peak 3× the average because each region peaks in its own business hours. Illustrative.',
+    'serving.minReplicas': ['choice', 'Three replicas: one inference cell per region.'],
+    'platform.nbBasic': ['choice', 'One NodeBalancer per region.'],
+    'stages.0.count': ['choice', 'One app node per region.']
+  },
+  eval: {
+    'workload.tasksPerDay': '670 test cases a day, about 20,000 a month across 4 releases. Illustrative.',
+    'workload.callsPerTask': 'Three calls per case: the candidate answer and judge calls. Illustrative.',
+    'routing.linodeShare': ['choice', '70% served on Linode; the rest goes to an external judge model.'],
+    'custom.0.amount': 'Placeholder for expert review time, not a quote.'
+  },
+  'm-live': {
+    'workload.mediaHours': '14,600 channel-hours = 20 channels × 730 h. Illustrative.',
+    'stages.0.concurrent': '20 channels running 24/7. Illustrative.',
+    'stages.0.perInstance': ['vendor', 'The Quadra T1U is rated for 32× 1080p30. A full ABR ladder uses several 1080p30 equivalents per channel, so 12 channels per VPU is a conservative start. Validate it with your own ladder.'],
+    'stages.1.perInstance': 'Eight live caption streams per RTX 4000 Ada, not measured.' + MEASURE,
+    'stages.2.count': ['choice', 'Two packager and origin nodes for redundancy.'],
+    'network.egressTB': '200 TB of origin egress to the CDN a month. Illustrative.'
+  },
+  'm-loc': {
+    'workload.tasksPerDay': '30,000 subtitle segments a day = 900,000 a month, about 300 per content hour across all target languages. Illustrative.',
+    'workload.mediaHours': '3,000 content hours a month. Illustrative.',
+    'stages.0.rate': '25 content hours per GPU-hour for ASR, not measured.' + MEASURE,
+    'custom.0.amount': 'Placeholder for sampled linguist QC, not a quote.'
+  },
+  'm-dub': {
+    'workload.mediaHours': '1,500 dubbed hours = 500 content hours × 3 languages. Illustrative.',
+    'stages.1.rate': 'Six dubbed hours of TTS per GPU-hour, not measured.' + MEASURE,
+    'stages.2.rate': '16 content hours per VPU-hour for remux and transcode, not measured.' + MEASURE,
+    'custom.0.amount': 'Placeholder for voice talent licences and QC, not a quote.'
+  },
+  'm-high': {
+    'workload.tasksPerDay': '54,000 frames a day = 1.62 million a month: 900 event hours sampled at 0.5 frames per second.',
+    'workload.mediaHours': '900 event hours = 300 events × 3 hours. Illustrative.',
+    'stages.0.units': '600 content hours of clips rendered a month. Illustrative.'
+  },
+  'm-ugc': {
+    'workload.tasksPerDay': '20,000 uploads a day. Illustrative.',
+    'workload.callsPerTask': '37 model calls per upload: for a 3-minute upload, about one frame every 5 seconds plus a tagging call. Illustrative.',
+    'workload.mediaHours': '30,000 hours a month = 600,000 uploads × 3 minutes on average. Illustrative.',
+    'custom.0.amount': 'Placeholder for human moderation escalations, not a quote.'
+  },
+  'm-search': {
+    'workload.tasksPerDay': 'Five searches per viewer a day. Illustrative.',
+    'stages.0.units': '2,000 new content hours embedded a month. Illustrative.',
+    'stages.0.rate': '40 content hours per GPU-hour for shot embedding, not measured.' + MEASURE,
+    'custom.0.amount': 'Placeholder for embedding the existing 50,000-hour library once, not a quote.'
+  },
+  'm-ssai': {
+    'workload.tasksPerDay': '8,640 classifications per channel a day: one every 10 seconds.',
+    'workload.mediaHours': '36,500 channel-hours = 50 channels × 730 h. Illustrative.',
+    'stages.0.count': ['choice', 'Three manifest nodes. Size them from concurrent sessions in a pilot.']
+  }
+};
+
+// Paths of the numeric and choice fields of a scenario, in form order (text fields excluded).
+function scenarioPaths(s) {
+  const out = [];
+  const keys = (sec, ks) => ks.forEach(k => { if (s[sec] && s[sec][k] !== undefined) out.push(sec + '.' + k); });
+  keys('workload', ['users', 'tasksPerDay', 'activeDays', 'callsPerTask', 'retryPct', 'inTok', 'outTok', 'activeHours', 'peakFactor', 'mediaHours']);
+  keys('serving', ['profile', 'plan', 'prefillTps', 'decodeTps', 'utilization', 'provisioning', 'minReplicas', 'hours']);
+  keys('routing', ['linodeShare']);
+  keys('api', ['inRate', 'outRate']);
+  (s.stages || []).forEach((st, i) => {
+    const m = st.method === 'fixed' ? ['count', 'hours'] : st.method === 'live' ? ['concurrent', 'perInstance', 'hours'] : ['units', 'rate', 'util'];
+    ['plan'].concat(m).forEach(k => out.push(`stages.${i}.${k}`));
+  });
+  keys('platform', ['lke', 'nbBasic', 'nbPremium', 'nbPremiumGB', 'objGB', 'blockGB', 'db', 'dbNodes', 'mgmt']);
+  keys('network', ['egressTB']);
+  (s.custom || []).forEach((c, i) => out.push(`custom.${i}.amount`));
+  keys('finance', ['reservePct', 'horizon']);
+  return out;
+}
+
+const basisVal = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
+const priceSrc = e => (e.sync === 'manual'
+  ? 'Price kept by hand from the Akamai pricing page (not in the public pricing API).'
+  : 'Price from the public Akamai Cloud pricing API, refreshed daily.');
+
+// Returns { k: kind key, n: note } for a preset value, or null for unknown use cases or paths.
+function basisFor(id, path, snap) {
+  const uc = USE_CASES.find(u => u.id === id);
+  if (!uc) return null;
+  const s = snap || uc.s();
+  const v = basisVal(s, path);
+  if (v === undefined) return null;
+  const raw = (PRESET_BASIS[id] || {})[path];
+  const own = raw == null ? null : Array.isArray(raw) ? raw : ['assumed', raw];
+  const extra = own ? ' ' + own[1] : '';
+
+  if (path === 'serving.plan' || /^stages\.\d+\.plan$/.test(path)) {
+    const p = PLANS[v];
+    if (!p) return { k: 'user', n: 'Plan not in the price book.' };
+    return { k: 'price', n: `${p.name} at $${p.hr}/h${p.mo ? `, capped at $${p.mo}/mo` : ''}. ${priceSrc(p)}${extra}` };
+  }
+  if (path === 'platform.db') {
+    if (v === 'none') return { k: 'choice', n: 'No managed database in this use case.' };
+    const d = DBPLANS[v];
+    return d ? { k: 'price', n: `${d.name}, priced per cluster size. ${priceSrc(d)}${extra}` } : null;
+  }
+  if (own) return { k: own[0], n: own[1] };
+  if (path === 'serving.decodeTps' && s.serving.profile === 'bw-8b') {
+    return { k: 'bench', n: 'Akamai’s test of an 8B-class model on one RTX PRO 6000 Blackwell reported about 3,030 tokens/s (100 concurrent requests, 200 input and 200 output tokens); rounded to 3,000. Your prompt lengths will differ.' };
+  }
+  const g = GENERIC_BASIS[path.replace(/\.\d+\./, '.*.')];
+  return g ? { k: g[0], n: g[1] } : null;
+}
+
+if (typeof module !== 'undefined') module.exports = { USE_CASES, base, merge, BASIS_KINDS, PRESET_BASIS, basisFor, scenarioPaths };
