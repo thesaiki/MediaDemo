@@ -34,7 +34,7 @@ monthly and first-year cost for AI and Media AI workloads on Akamai Cloud.
 | `tools/cloud-calculator/src/` | Source of truth: `src.html` (UI), `engine.js` (cost engine), `prices.json` (price book and change log), `presets.js` (use-case library) |
 | `tools/cloud-calculator/build.mjs` | Inlines prices, engine and presets into one HTML document |
 | `tools/cloud-calculator/sync/sync-prices.mjs` | Refreshes `prices.json` from the public pricing API (logic in `sync/diff.mjs`, mapping in `sync/mapping.json`) |
-| `tools/cloud-calculator/test/` | `engine.test.mjs` pins hand-calculated figures; `sync.test.mjs` checks the sync against saved API fixtures |
+| `tools/cloud-calculator/test/` | `engine.test.mjs` pins hand-calculated figures; `sync.test.mjs` checks the sync against saved API fixtures; `basis.test.mjs` checks that every use-case value has a source note |
 | `.github/workflows/cloud-prices.yml` | Daily price sync, commit and deploy |
 | `public/cloud-calculator/index.html` | Generated (git-ignored); copied by Vite to `dist/cloud-calculator/index.html` |
 
@@ -43,6 +43,16 @@ monthly and first-year cost for AI and Media AI workloads on Akamai Cloud.
 and sync checks. Do not edit the generated file; change `tools/cloud-calculator/src/`
 and rebuild. Set `MAIN_SITE_URL` when building to change the planner's
 "Back to Media Solutions" link (default `https://mediademo.fde-demo.com/`).
+
+### Source notes
+
+Every use-case value shows where it comes from: published price, Akamai
+benchmark, vendor rating, planning choice, assumption, or "your value"
+once edited. Generic notes are in `GENERIC_BASIS` and per-use-case notes in
+`PRESET_BASIS` at the end of `src/presets.js`; plan and database prices are
+cited automatically from `prices.json`. When you add or change a use case,
+add notes for the values that differ from the generic ones; `npm test`
+fails if a value has no note or a note points at a value that does not exist.
 
 ### Price sync
 
